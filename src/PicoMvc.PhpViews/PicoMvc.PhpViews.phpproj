@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Name>PhpViews</Name>
+    <ProjectGuid>{276d0dc2-0497-42fe-b88b-179e6a1cdd48}</ProjectGuid>
+    <CompilationMode>Standard</CompilationMode>
+    <OutputType>Library</OutputType>
+    <RootNamespace>PhpViews</RootNamespace>
+    <AssemblyName>PhpViews</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <IncludeDebugInformation>true</IncludeDebugInformation>
+    <OutputPath>bin\Debug\</OutputPath>
+    <TargetKind>dll</TargetKind>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <IncludeDebugInformation>false</IncludeDebugInformation>
+    <OutputPath>bin\Release\</OutputPath>
+    <TargetKind>dll</TargetKind>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+      <Name>mscorlib</Name>
+      <AssemblyName>mscorlib.dll</AssemblyName>
+    </Reference>
+    <Reference Include="System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+      <Name>System</Name>
+      <AssemblyName>System.dll</AssemblyName>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="helloworld.php" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Phalanger\2.1\Phalanger.targets" />
+</Project>

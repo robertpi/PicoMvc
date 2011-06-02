@@ -1,0 +1,1539 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>ShmChannel</name>
+    </assembly>
+    <members>
+        <member name="T:PHP.Core.ShmClientChannel">
+            <summary>
+            Shared memory remoting channel, the client end.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmClientChannel.defaultChannelPriority">
+            <summary>
+            Default channel priority.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmClientChannel.channelPriority">
+            <summary>
+            Current channel priority.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmClientChannel.channelName">
+            <summary>
+            Channel name.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmClientChannel.clientSinkProvider">
+            <summary>
+            Client sink chain provider.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmClientChannel.#ctor">
+            <summary>
+            Creates a new <see cref="T:PHP.Core.ShmClientChannel"/>. Parameterless constructor sets no properties and
+            chains no additional sinks.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmClientChannel.#ctor(System.Collections.IDictionary,System.Runtime.Remoting.Channels.IClientChannelSinkProvider)">
+            <summary>
+            Creates a new <see cref="T:PHP.Core.ShmClientChannel"/> with given properties and sinks.
+            </summary>
+            <param name="properties">Properties of the channel.</param>
+            <param name="clientProviderChain">Sink providers for the channel.</param>
+        </member>
+        <member name="M:PHP.Core.ShmClientChannel.InitProperties(System.Collections.IDictionary)">
+            <summary>
+            Initializes members of the instance according to given properties.
+            </summary>
+            <param name="properties">The properties.</param>
+        </member>
+        <member name="M:PHP.Core.ShmClientChannel.InitProviders(System.Runtime.Remoting.Channels.IClientChannelSinkProvider)">
+            <summary>
+            Inititializes provider sink chain.
+            </summary>
+            <param name="clientProviderChain">Additional sinks to be used with this channel.</param>
+            <remarks>
+            The resulting chain is <see cref="T:System.Runtime.Remoting.Channels.BinaryClientFormatterSink"/> -&gt; <see cref="T:PHP.Core.ShmClientTransportSink"/>
+            if no user sinks are given, <c>[user sinks]</c> -&gt; <see cref="T:PHP.Core.ShmClientTransportSink"/> otherwise.
+            Therefore, if you pass a non-null <paramref name="clientProviderChain"/> to this method, you are
+            responsible for creating and chaining a formatter!
+            </remarks>
+        </member>
+        <member name="M:PHP.Core.ShmClientChannel.Parse(System.String,System.String@)">
+            <summary>
+            Returns the current channel URI and places object URI into out parameter.
+            </summary>
+            <param name="url">The URL of the object.</param>
+            <param name="objectUri">When this method returns, contains a string that holds 
+            the object URI.</param>
+            <returns>The URI of the current channel, or a <B>null</B> reference if the URI does 
+            not belong to this channel.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmClientChannel.CreateMessageSink(System.String,System.Object,System.String@)">
+            <summary>
+            Returns a channel message sink that delivers messages to the specified URL or channel 
+            data object.
+            </summary>
+            <param name="url">The URL to which the new sink will deliver messages. Can be a <B>null</B>
+            reference.</param>
+            <param name="data">The channel data object of the remote host to which 
+            the new sink will deliver messages. Can be a <B>null</B> reference.</param>
+            <param name="objUri">When this method returns, contains a URI of the new channel 
+            message sink that delivers messages to the specified URL or channel data object.</param>
+            <returns>A channel message sink that delivers messages to the specified URL or channel 
+            data object, or a <B>null</B> reference if the channel cannot connect to the given endpoint.
+            </returns>
+        </member>
+        <member name="P:PHP.Core.ShmClientChannel.ChannelName">
+            <summary>
+            Gets the name of the channel.
+            </summary>
+        </member>
+        <member name="P:PHP.Core.ShmClientChannel.ChannelPriority">
+            <summary>
+            Gets the priority of the channel.
+            </summary>
+        </member>
+        <member name="T:PHP.Core.ShmClientTransportSinkProvider">
+            <summary>
+            Provides client transport sink for <see cref="T:PHP.Core.ShmClientChannel"/>.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmClientTransportSinkProvider.#ctor">
+            <summary>
+            Creates a new <see cref="T:PHP.Core.ShmClientTransportSinkProvider"/>.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmClientTransportSinkProvider.CreateSink(System.Runtime.Remoting.Channels.IChannelSender,System.String,System.Object)">
+            <summary>
+            Creates a sink chain.
+            </summary>
+            <param name="channel">Channel for which the current sink chain is being constructed.</param>
+            <param name="url">The URL of the object to connect to.</param>
+            <param name="data">A channel data object describing a channel on the remote server.</param>
+            <returns>The first sink of the newly formed channel sink chain, or a <B>null</B> reference 
+            indicating that this provider will not or cannot provide a connection for this endpoint.
+            </returns>
+        </member>
+        <member name="P:PHP.Core.ShmClientTransportSinkProvider.Next">
+            <summary>
+            Gets or sets the next sink provider in the channel sink provider chain.
+            </summary>
+            <exception cref="T:System.NotSupportedException">When this property is set.</exception>
+        </member>
+        <member name="T:PHP.Core.ShmClientTransportSink">
+            <summary>
+            Client transport sink for <see cref="T:PHP.Core.ShmClientChannel"/>.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmClientTransportSink.defaultRetryCount">
+            <summary>
+            Number of retries when sending a message.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmClientTransportSink.sectionName">
+            <summary>
+            Name of the file mapping (section) object this transport sink is going to connect to.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmClientTransportSink.shmConnectionPool">
+            <summary>
+            Pool of previously created connections ready for reuse.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmClientTransportSink.callback">
+            <summary>
+            A callback for handling asynchronous calls. <seealso cref="M:PHP.Core.ShmClientTransportSink.AsyncProcessRequest(System.Runtime.Remoting.Channels.IClientChannelSinkStack,System.Runtime.Remoting.Messaging.IMessage,System.Runtime.Remoting.Channels.ITransportHeaders,System.IO.Stream)"/>
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmClientTransportSink.#ctor(System.String)">
+            <summary>
+            Creates a new <see cref="T:PHP.Core.ShmClientTransportSink"/>.
+            </summary>
+            <param name="url">The URL of the object to connect to.</param>
+        </member>
+        <member name="M:PHP.Core.ShmClientTransportSink.AsyncProcessRequest(System.Runtime.Remoting.Channels.IClientChannelSinkStack,System.Runtime.Remoting.Messaging.IMessage,System.Runtime.Remoting.Channels.ITransportHeaders,System.IO.Stream)">
+            <summary>
+            Requests asynchronous processing of a method call on the current sink.
+            </summary>
+            <param name="stack">A stack of channel sinks that called this sink.</param>
+            <param name="msg">The message to process.</param>
+            <param name="headers">The headers to add to the outgoing message heading to the server.</param>
+            <param name="stream">The stream headed to the transport sink.</param>
+        </member>
+        <member name="M:PHP.Core.ShmClientTransportSink.AsyncProcessResponse(System.Runtime.Remoting.Channels.IClientResponseChannelSinkStack,System.Object,System.Runtime.Remoting.Channels.ITransportHeaders,System.IO.Stream)">
+            <summary>
+            Requests asynchronous processing of a response to a method call on the current sink.
+            </summary>
+            <param name="stack">A stack of sinks that called this sink.</param>
+            <param name="obj">Information generated on the request side that is associated with 
+            this sink.</param>
+            <param name="headers">The headers retrieved from the server response stream.</param>
+            <param name="stream">The stream coming back from the transport sink.</param>
+            <exception cref="T:System.NotSupportedException">Always, because it is no use calling
+            <see cref="M:PHP.Core.ShmClientTransportSink.AsyncProcessResponse(System.Runtime.Remoting.Channels.IClientResponseChannelSinkStack,System.Object,System.Runtime.Remoting.Channels.ITransportHeaders,System.IO.Stream)"/> on a client transport sink.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmClientTransportSink.GetRequestStream(System.Runtime.Remoting.Messaging.IMessage,System.Runtime.Remoting.Channels.ITransportHeaders)">
+            <summary>
+            Returns the <see cref="T:System.IO.Stream"/> onto which the provided message is to be serialized.
+            </summary>
+            <param name="msg">The <see cref="T:System.Runtime.Remoting.Messaging.IMethodCallMessage"/> containing details about the method call.
+            </param>
+            <param name="headers">The headers to add to the outgoing message heading to the server.
+            </param>
+            <returns>The <see cref="T:System.IO.Stream"/> onto which the provided message is to be serialized.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmClientTransportSink.ProcessMessage(System.Runtime.Remoting.Messaging.IMessage,System.Runtime.Remoting.Channels.ITransportHeaders,System.IO.Stream,System.Runtime.Remoting.Channels.ITransportHeaders@,System.IO.Stream@)">
+            <summary>
+            Requests message processing from the current sink.
+            </summary>
+            <param name="msg">The message to process.</param>
+            <param name="reqHead">The headers to add to the outgoing message heading to the server.
+            </param>
+            <param name="reqStm">The stream headed to the transport sink.</param>
+            <param name="respHead">When this method returns, contains an <see cref="T:System.Runtime.Remoting.Channels.ITransportHeaders"/>
+            interface that holds the headers that the server returned.</param>
+            <param name="respStm">When this method returns, contains a <see cref="T:System.IO.Stream"/> coming back from
+            the transport sink.</param>
+            <exception cref="T:PHP.Core.ShmIOException">Failed to process the message.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmClientTransportSink.Dispose">
+            <summary>
+            Disposes of the connection pool.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmClientTransportSink.ReceiveCallback(System.Object)">
+            <summary>
+            Waits for a reply when processing asynchronous method call request. This method
+            runs in a separate worker thread.
+            </summary>
+            <param name="state">Reference to a <see cref="T:PHP.Core.ShmConnectionCookie"/> describing the original
+            request.</param>
+        </member>
+        <member name="M:PHP.Core.ShmClientTransportSink.SendWithRetry(System.Runtime.Remoting.Messaging.IMessage,System.Runtime.Remoting.Channels.ITransportHeaders,System.IO.Stream)">
+            <summary>
+            Sends a message across the apropriate shared memory connection.
+            </summary>
+            <param name="msg">The message to send.</param>
+            <param name="reqHead">The headers to add to the outgoing message.</param>
+            <param name="reqStm">The stream headed to the transport sink.</param>
+            <returns>The shared memory connection through which the message was transmitted.</returns>
+            <exception cref="T:PHP.Core.ShmIOException">Failed to send the message.</exception>
+        </member>
+        <member name="P:PHP.Core.ShmClientTransportSink.Properties">
+            <summary>
+            Gets a dictionary through which properties on the sink can be accessed.
+            </summary>
+        </member>
+        <member name="P:PHP.Core.ShmClientTransportSink.System#Runtime#Remoting#Channels#IClientChannelSink#NextChannelSink">
+            <summary>
+            Gets the next client channel sink in the client sink chain.
+            </summary>
+        </member>
+        <member name="T:PHP.Core.ShmConnectionCookie">
+            <summary>
+            Context that is passed to worker threads when waiting for asynchronous call completion.
+            <seealso cref="M:PHP.Core.ShmClientTransportSink.ReceiveCallback(System.Object)"/>
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectionCookie.Connection">
+            <summary>
+            The <see cref="T:PHP.Core.ShmConnection"/> through which the call was made.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectionCookie.SinkStack">
+            <summary>
+            The stack of channel sinks that called <see cref="T:PHP.Core.ShmClientTransportSink"/> to process the call.
+            </summary>
+        </member>
+        <member name="T:PHP.Core.ShmConnection">
+            <summary>
+            Shared memory connection. This class represents one of the two ends of a shared memory
+            connection. Whether it is the server end or the client end depends on a constructor
+            parameter.
+            </summary>
+            <remarks>
+            <para>
+            The communication protocol is as follows:<br/>
+            Sender waits for his write event, copies data to the shared memory block and finally
+            signals read event of the other side.
+            Receiver waits for his read event, copies data from the shared memory block, and
+            signals write event of the other side.
+            </para>
+            <para>
+            Shared memory block layout:
+            <list type="table">
+            <item>
+            <term>4 bytes</term>
+            <description>total length of the message from server to client</description>
+            </item>
+            <item>
+            <term><see cref="F:PHP.Core.ShmConnection.MESSAGE_BLOCK_SIZE"/> bytes</term>
+            <description>the message from server to client (or part of it)</description>
+            </item>
+            <item>
+            <term>4 bytes</term>
+            <description>total length of the message from client to server</description>
+            </item>
+            <item>
+            <term><see cref="F:PHP.Core.ShmConnection.MESSAGE_BLOCK_SIZE"/> bytes</term>
+            <description>the message from client to server (or part of it)</description>
+            </item>
+            </list>
+            </para>
+            </remarks>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.SECTION_SIZE">
+            <summary>Size of the shared memory block.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.TRANSFER_BLOCK_SIZE">
+            <summary>Size of each of the two transfer blocks.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.MESSAGE_BLOCK_SIZE">
+            <summary>Size of each of the two message blocks.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.waitTimeout">
+            <summary>Timeout when waiting for various synchronization objects.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.fileMappingPrefix">
+            <summary>Common prefix of <see cref="F:PHP.Core.ShmConnection.sectionHandle"/> names.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.srvrRdEventPrefix">
+            <summary>Common prefix of <see cref="F:PHP.Core.ShmConnection.serverRdEventHandle"/> names.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.srvrWrEventPrefix">
+            <summary>Common prefix of <see cref="F:PHP.Core.ShmConnection.serverWrEventHandle"/> names.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.clntRdEventPrefix">
+            <summary>Common prefix of <see cref="F:PHP.Core.ShmConnection.clientRdEventHandle"/> names.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.clntWrEventPrefix">
+            <summary>Common prefix of <see cref="F:PHP.Core.ShmConnection.clientWrEventHandle"/> names.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.threadMutexPrefix">
+            <summary>Common prefix of <see cref="F:PHP.Core.ShmConnection.threadMutexHandle"/> names.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.defaultAgeLastTimeAccessed">
+            <summary>
+            Number of milliseconds of inactivity that must elapse to consider this connection stale.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.headerMarker">
+            <summary>Header delimiter - more headers follow.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.headerEndMarker">
+            <summary>Header delimiter - no more headers.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.serverSide">
+            <summary>
+            Specifies whether this is the server end of the connection.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.sectionName">
+            <summary>
+            Name of the file mapping (section) object.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.sectionHandle">
+            <summary>Handle of the section object.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.serverWrEventHandle">
+            <summary>Handle of the server write event object.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.clientWrEventHandle">
+            <summary>Handle of the client write event object.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.serverRdEventHandle">
+            <summary>Handle of the server read event object.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.clientRdEventHandle">
+            <summary>Handle of the client read event object.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.threadMutexHandle">
+            <summary>Handle of the thread death mutex object.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.viewAddr">
+            <summary>Address in virtual address space where the block of shared memory begins.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.writeSizeAddr">
+            <summary>Address in virtual address space where the write transfer block begins.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.readSizeAddr">
+            <summary>Address in virtual address space where the read transfer block begins.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.writeMsgAddr">
+            <summary>Address in virtual address space where the write message block begins.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.readMsgAddr">
+            <summary>Address in virtual address space where the read message block begins.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.clientReadHandles">
+            <summary>
+            The handles to apply <see cref="M:PHP.Core.ShmNative.WaitForMultipleObjects(System.UInt32,System.IntPtr[],System.Boolean,System.UInt32)"/> on when waiting
+            for incoming data at the client end.
+            </summary>
+            <remarks>
+            Index 0 should contain handle to the client read event, index 1 handle to the mutex
+            owned by the server thread that serves this client thread. Valid only for clients, 
+            who pass this array to <see cref="M:PHP.Core.ShmNative.WaitForMultipleObjects(System.UInt32,System.IntPtr[],System.Boolean,System.UInt32)"/>.
+            </remarks>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.serverReadHandles">
+            <summary>
+            The handles to apply <see cref="M:PHP.Core.ShmNative.WaitForMultipleObjects(System.UInt32,System.IntPtr[],System.Boolean,System.UInt32)"/> on when waiting
+            for incoming data at the server end.
+            </summary>
+            <remarks>
+            Index 0 should contain handle to the server read event, index 1 handle to stop
+            listening event. Valid only for servers, who pass this array to
+            <see cref="M:PHP.Core.ShmNative.WaitForMultipleObjects(System.UInt32,System.IntPtr[],System.Boolean,System.UInt32)"/>.
+            </remarks>&gt;
+        </member>
+        <member name="F:PHP.Core.ShmConnection.stream">
+            <summary>A <see cref="T:System.IO.Stream"/> containing the incoming/outgoing data.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.writer">
+            <summary>A writer connected to <see cref="F:PHP.Core.ShmConnection.stream"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.reader">
+            <summary>A reader connected to <see cref="F:PHP.Core.ShmConnection.stream"/>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.#ctor(System.String,System.Boolean)">
+            <summary>
+            Constructs a new shared memory connection object.
+            </summary>
+            <param name="sectionName">File mapping (section) name.</param>
+            <param name="create">Specifies whether the section should be created.</param>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.#ctor(System.String,System.Boolean,System.IntPtr)">
+            <summary>
+            Constructs a new shared memory connection object.
+            </summary>
+            <param name="sectionName">File mapping (section) name.</param>
+            <param name="create">Specifies whether the section should be created.</param>
+            <param name="stopListeningEventHandle">Handle of the stop listening event.</param>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.Create">
+            <summary>
+            Creates a new file mapping (section) object and maps a view of it to the virtual
+            address space.
+            </summary>
+            <exception cref="T:PHP.Core.ShmIOException">Creation of unmanaged resources failed.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.Connect">
+            <summary>
+            Opens an existing file mapping (section) object and maps a view of it to the virtual
+            address space.
+            </summary>
+            <exception cref="T:PHP.Core.ShmIOException">Creation of unmanaged resources failed.</exception>
+        </member>
+        <member name="F:PHP.Core.ShmConnection.lastTimeAccessed">
+            <summary>
+            The value of <see cref="P:System.Environment.TickCount"/> last time an activity was recorded.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.UpdateLastTimeAccessed">
+            <summary>
+            Updates <see cref="F:PHP.Core.ShmConnection.lastTimeAccessed"/>.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.IsConnectionStale">
+            <summary>
+            Determines whether this connection is alive or stale.
+            </summary>
+            <returns><B>true</B> if this connection if stale, <B>false</B> otherwise.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.Write(System.Byte[])">
+            <summary>
+            Writes a byte array into the outgoing buffer.
+            </summary>
+            <param name="buffer">The byte array to save.</param>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.Write(System.Byte[],System.Int32)">
+            <summary>
+            Writes a byte array into the outgoing buffer.
+            </summary>
+            <param name="buffer">The byte array to save.</param>
+            <param name="length">Length of the byte array.</param>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.Write(System.UInt16)">
+            <summary>
+            Writes an <c>ushort</c> into the outgoing buffer.
+            </summary>
+            <param name="val">The <c>ushort</c> to save.</param>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.Write(System.Int32)">
+            <summary>
+            Writes an <c>int</c> into the outgoing buffer.
+            </summary>
+            <param name="val">The <c>int</c> to save.</param>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.Write(System.String)">
+            <summary>
+            Writes a <see cref="T:System.String"/> into the outgoing buffer.
+            </summary>
+            <param name="str">The <see cref="T:System.String"/> to save.</param>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.Write(System.IO.Stream)">
+            <summary>
+            Writes a <see cref="T:System.IO.Stream"/> into the outgoing buffer.
+            </summary>
+            <param name="str">The <see cref="T:System.IO.Stream"/> to save.</param>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.ReadStream">
+            <summary>
+            Reads a <see cref="T:System.IO.Stream"/> from the incoming buffer.
+            </summary>
+            <returns>The <see cref="T:System.IO.Stream"/>.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.ReadBytes(System.Int32)">
+            <summary>
+            Reads a byte array from the incoming buffer.
+            </summary>
+            <param name="length">Length of the array.</param>
+            <returns>The byte array.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.ReadUShort">
+            <summary>
+            Reads an <c>ushort</c> from the incoming buffer.
+            </summary>
+            <returns>The <c>ushort</c>.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.ReadInt">
+            <summary>
+            Reads an <c>int</c> from the incoming buffer.
+            </summary>
+            <returns>The <c>int</c>.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.ReadString">
+            <summary>
+            Reads a <see cref="T:System.String"/> from the incoming buffer.
+            </summary>
+            <returns>The <see cref="T:System.String"/>.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.BeginWriteMessage">
+            <summary>
+            Prepares buffers for the outgoing message.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.EndWriteMessage">
+            <summary>
+            Transmits the message stored in <see cref="F:PHP.Core.ShmConnection.stream"/> through the shared memory.
+            </summary>
+            <exception cref="T:PHP.Core.ShmIOException">Waiting for a synchronization object failed.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.BeginReadMessage">
+            <summary>
+            Receives the message from shared memory into <see cref="F:PHP.Core.ShmConnection.stream"/>.
+            </summary>
+            <exception cref="T:PHP.Core.ShmIOException">Waiting for a synchronization object failed.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.EndReadMessage">
+            <summary>
+            Resets the incoming buffer.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.WriteHeaders(System.String,System.Runtime.Remoting.Channels.ITransportHeaders)">
+            <summary>
+            Writes transport headers into the outgoing buffer.
+            </summary>
+            <param name="uri">The request URI.</param>
+            <param name="headers">The headers to write.</param>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.ReadHeaders">
+            <summary>
+            Reads transport headers from the incoming buffer.
+            </summary>
+            <returns>The headers.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.Parse(System.String,System.String@)">
+            <summary>
+            Returns the object URI as an out parameter, and the URI of the current channel as the return value.
+            </summary>
+            <param name="url">The URL of the object.</param>
+            <param name="objUri">When this method returns, contains a <see cref="T:System.String"/> that holds 
+            the object URI.</param>
+            <returns>The URI of the current channel, or a <B>null</B> reference if the URI does not belong to
+            this channel.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.Dispose">
+            <summary>
+            Standard <see cref="M:System.IDisposable.Dispose"/> implementation.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.Dispose(System.Boolean)">
+            <summary>
+            Disposes of unmanaged and optionally also managed resources.
+            </summary>
+            <param name="disposing">If <B>true</B>, both managed and unmanaged resources should be released.
+            If <B>false</B> only unmanaged resources should be released.</param>
+        </member>
+        <member name="M:PHP.Core.ShmConnection.Finalize">
+            <summary>
+            Destructor that will run only if the <see cref="M:PHP.Core.ShmConnection.Dispose"/> method does not get called.
+            </summary>
+        </member>
+        <member name="T:PHP.Core.ShmConnectionPoolManager">
+            <summary>
+            Connection pool manager. Manages <see cref="T:PHP.Core.ShmConnectionPool"/> instances.
+            Note that there is a separate connection pool for each section name.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectionPoolManager.timer">
+            <summary>A timer that is used to periodically check for stale connections.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectionPoolManager.poolInstances">
+            <summary>Connection pool collection.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnectionPoolManager.#ctor">
+            <summary>
+            Private constructor to prevent instantiation.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnectionPoolManager.#cctor">
+            <summary>
+            Static constructor. Initializes the <see cref="F:PHP.Core.ShmConnectionPoolManager.timer"/>.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnectionPoolManager.Cleanup">
+            <summary>
+            Cleans up static members.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnectionPoolManager.ShmConnectionPoolManagerCallback(System.Object)">
+            <summary>
+            Timer callback.
+            </summary>
+            <param name="state">Not used.</param>
+        </member>
+        <member name="M:PHP.Core.ShmConnectionPoolManager.LookupPool(System.String)">
+            <summary>
+            Looks up an <see cref="T:PHP.Core.ShmConnectionPool"/> according to a given section name.
+            </summary>
+            <param name="sectionName">The section name.</param>
+            <returns>The <see cref="T:PHP.Core.ShmConnectionPool"/> containing zero or more 
+            <see cref="T:PHP.Core.ShmConnection"/>s that are connected to <paramref name="sectionName"/>.</returns>
+        </member>
+        <member name="T:PHP.Core.ShmConnectionPool">
+            <summary>
+            Connection pool. Stores <see cref="T:PHP.Core.ShmConnection"/> instances that are ready for reuse.
+            </summary>
+            <remarks>
+            <para>
+            Whenever an <see cref="T:PHP.Core.ShmConnection"/> instance is needed, the <see cref="M:PHP.Core.ShmConnectionPool.Obtain"/> method
+            of the corresponding <see cref="T:PHP.Core.ShmConnectionPool"/> should be invoked to check whether there
+            is a cached connection waiting to be reused. When a connection is no longer needed (could be
+            a connection gotten from the pool as well as a fresh connection created with <c>new</c>), it
+            should be returned to the pool using the <see cref="M:PHP.Core.ShmConnectionPool.ReturnToPool(PHP.Core.ShmConnection)"/> method.
+            </para>
+            <para>
+            Connections are stored in a <see cref="T:System.Collections.Stack"/>.
+            </para>
+            </remarks>
+        </member>
+        <member name="F:PHP.Core.ShmConnectionPool.connectionStack">
+            <summary>
+            The stack of cached connections.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnectionPool.#ctor">
+            <summary>
+            Creates a new <see cref="T:PHP.Core.ShmConnectionPool"/>.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnectionPool.Dispose">
+            <summary>
+            Closes all connections.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnectionPool.CloseStaleConnections">
+            <summary>
+            Closes connections that have not been used for a long time.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnectionPool.CloseAllConnections">
+            <summary>
+            Closes all connections.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnectionPool.Obtain">
+            <summary>
+            Tries to obtain a connection from the pool.
+            </summary>
+            <returns>The <see cref="T:PHP.Core.ShmConnection"/> or <B>null</B> if there no connections in this pool.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmConnectionPool.ReturnToPool(PHP.Core.ShmConnection)">
+            <summary>
+            Puts a <see cref="T:PHP.Core.ShmConnection"/> to the pool for reuse.
+            </summary>
+            <param name="connection">The connection.</param>
+        </member>
+        <member name="T:PHP.Core.ShmChannel">
+            <summary>
+            Shared memory remoting channel.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmChannel.verbose">
+            <summary>
+            Specifies whether the channel should output verbose debug messages using the
+            <see cref="T:System.Diagnostics.Debug"/> class.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmChannel.channelScheme">
+            <summary>
+            URL prefix for this channel (scheme).
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmChannel.clientChannel">
+            <summary>
+            Client side of the channel.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmChannel.serverChannel">
+            <summary>
+            Server side of the channel.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmChannel.#ctor">
+            <summary>
+            Parameterless constructor creates only the client channel. Use this constructor in
+            the clients if you do not intend to receive callbacks.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmChannel.#ctor(System.String)">
+            <summary>
+            Creates both the client and the server channel.
+            </summary>
+            <param name="section">Name of the section object used for communication. If null, a unique 
+            name is generated, which is useful if you need the server channel only for callbacks.</param>
+        </member>
+        <member name="M:PHP.Core.ShmChannel.#ctor(System.Collections.IDictionary,System.Runtime.Remoting.Channels.IClientChannelSinkProvider,System.Runtime.Remoting.Channels.IServerChannelSinkProvider)">
+            <summary>
+            Creates both the client and the server channel. Properties and additional sink providers
+            can be specified.
+            </summary>
+            <param name="properties">Properties of the channel.</param>
+            <param name="clientSinkProvider">Sink providers for the client channel.</param>
+            <param name="serverSinkProvider">Sink providers for the server channel.</param>
+        </member>
+        <member name="M:PHP.Core.ShmChannel.Parse(System.String,System.String@)">
+            <summary>
+            Returns channel URI and places object URI into the <paramref name="objectUri"/> out parameter.
+            </summary>
+            <param name="url">The URL of the object.</param>
+            <param name="objectUri">When this method returns, contains a string that holds 
+            the object URI.</param>
+            <returns>The URI of the current channel, or a <B>null</B> reference if the URI does 
+            not belong to this channel.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmChannel.CreateMessageSink(System.String,System.Object,System.String@)">
+            <summary>
+            Returns a channel message sink that delivers messages to the specified URL or channel 
+            data object.
+            </summary>
+            <param name="url">The URL to which the new sink will deliver messages. Can be a <B>null</B>
+            reference.</param>
+            <param name="remoteChannelData">The channel data object of the remote host to which 
+            the new sink will deliver messages. Can be a <B>null</B> reference.</param>
+            <param name="objectUri">When this method returns, contains a URI of the new channel 
+            message sink that delivers messages to the specified URL or channel data object.</param>
+            <returns>A channel message sink that delivers messages to the specified URL or channel 
+            data object, or a <B>null</B> reference if the channel cannot connect to the given endpoint.
+            </returns>
+        </member>
+        <member name="M:PHP.Core.ShmChannel.GetUrlsForUri(System.String)">
+            <summary>
+            Returns an array of all the URLs for a URI.
+            </summary>
+            <param name="objectURI">The URI for which URLs are required.</param>
+            <returns>An array of the URLs.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmChannel.StartListening(System.Object)">
+            <summary>
+            Instructs the current channel to start listening for requests.
+            </summary>
+            <param name="data">Optional initialization information.</param>
+        </member>
+        <member name="M:PHP.Core.ShmChannel.StopListening(System.Object)">
+            <summary>
+            Instructs the current channel to stop listening for requests.
+            </summary>
+            <param name="data">Optional state information for the channel.</param>
+        </member>
+        <member name="M:PHP.Core.ShmChannel.Dispose">
+            <summary>
+            Propagates the <see cref="M:System.IDisposable.Dispose"/> call through the containment hierarchy.
+            </summary>
+        </member>
+        <member name="P:PHP.Core.ShmChannel.ChannelName">
+            <summary>
+            Gets the name of the channel.
+            </summary>
+        </member>
+        <member name="P:PHP.Core.ShmChannel.ChannelPriority">
+            <summary>
+            Gets the priority of the channel.
+            </summary>
+        </member>
+        <member name="P:PHP.Core.ShmChannel.ChannelData">
+            <summary>
+            Gets the channel-specific data.
+            </summary>
+        </member>
+        <member name="T:PHP.Core.ShmIOException">
+            <summary>
+            Shared memory IO exception. Thrown if something goes wrong with shm communication,
+            e.g. timeout expires when waiting for an event etc.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmIOException.#ctor(System.String)">
+            <summary>
+            Creates a new <see cref="T:PHP.Core.ShmIOException"/>.
+            </summary>
+            <param name="text">The message that describes the error.</param>
+        </member>
+        <member name="M:PHP.Core.ShmIOException.#ctor(System.String,System.Int32)">
+            <summary>
+            Creates a new <see cref="T:PHP.Core.ShmIOException"/> after a P/Invoke call failure.
+            </summary>
+            <param name="text">The message that describes the error.</param>
+            <param name="errorCode">Win32 error code. Usually the result of
+            <see cref="M:System.Runtime.InteropServices.Marshal.GetLastWin32Error"/>.
+            </param>
+        </member>
+        <member name="M:PHP.Core.ShmIOException.#ctor(System.String,System.Exception)">
+            <summary>
+            Creates a new instance of the <see cref="T:PHP.Core.ShmIOException"/> class with a specified error message
+            and a reference to the inner exception that is the cause of this exception.
+            </summary>
+            <param name="message">The error message that explains why the exception occurred.</param>
+            <param name="innerException">The exception that is the cause of the current exception.</param>
+        </member>
+        <member name="M:PHP.Core.ShmIOException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PHP.Core.ShmIOException"/> from serialized data.
+            </summary>
+            <param name="info">The object that holds the serialized object data.</param>
+            <param name="context">The contextual information about the source or destination of the exception.</param>
+        </member>
+        <member name="T:PHP.Core.ShmResources">
+            <summary>
+            Manages resources of the ShmChannel.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmResources.strings">
+            <summary>
+            Resource manager of strings.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmResources.#ctor">
+            <summary>
+            Private constructor to prevent instantiation.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmResources.#cctor">
+            <summary>
+            Initializes the resource manager.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmResources.GetString(System.String)">
+            <summary>
+            Retrieves a string resource.
+            </summary>
+            <param name="id">The string identifier.</param>
+            <returns>The string.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmResources.GetString(System.String,System.Object[])">
+            <summary>
+            Retrieves formatted string resource.
+            </summary>
+            <param name="id">The string identifier.</param>
+            <param name="args">An <see cref="T:System.Object"/> array containing zero or more objects to format.</param>
+            <returns>The formatted string resource.</returns>
+            <exception cref="T:System.ArgumentNullException">The string resource with <paramref name="id"/> doesn't exist.</exception>
+            <exception cref="T:System.FormatException">The string resource is not valid formatting string for specified arguments.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmResources.GetString(System.String,System.Object)">
+            <summary>
+            Retrieves formatted string resource.
+            </summary>
+            <param name="id">The string identifier.</param>
+            <param name="arg">An <see cref="T:System.Object"/> to format.</param>
+            <returns>The formatted string resource.</returns>
+            <exception cref="T:System.ArgumentNullException">The string resource with <paramref name="id"/> doesn't exist.</exception>
+            <exception cref="T:System.FormatException">The string resource is not valid formatting string for specified arguments.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmResources.GetString(System.String,System.Object,System.Object)">
+            <summary>
+            Retrieves formatted string resource.
+            </summary>
+            <param name="id">The string identifier.</param>
+            <param name="arg1">An <see cref="T:System.Object"/> to format.</param>
+            <param name="arg2">An <see cref="T:System.Object"/> to format.</param>
+            <returns>The formatted string resource.</returns>
+            <exception cref="T:System.ArgumentNullException">The string resource with <paramref name="id"/> doesn't exist.</exception>
+            <exception cref="T:System.FormatException">The string resource is not valid formatting string for specified arguments.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmResources.GetString(System.String,System.Object,System.Object,System.Object)">
+            <summary>
+            Retrieves formatted string resource.
+            </summary>
+            <param name="id">The string identifier.</param>
+            <param name="arg1">An <see cref="T:System.Object"/> to format.</param>
+            <param name="arg2">An <see cref="T:System.Object"/> to format.</param>
+            <param name="arg3">An <see cref="T:System.Object"/> to format.</param>
+            <returns>The formatted string resource.</returns>
+            <exception cref="T:System.ArgumentNullException">The string resource with <paramref name="id"/> doesn't exist.</exception>
+            <exception cref="T:System.FormatException">The string resource is not valid formatting string for specified arguments.</exception>
+        </member>
+        <member name="T:PHP.Core.ShmServerChannel">
+            <summary>
+            Shared memory remoting channel, the server end.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.defaultChannelPriority">
+            <summary>
+            Default channel priority.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.channelPriority">
+            <summary>
+            Current channel priority.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.listenMutex">
+            <summary>
+            This mutex prevents more than one server channel from listening on one section.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.stopListeningEventHandle">
+            <summary>
+            Setting this manual reset event causes all server threads waiting for clients'
+            requests to exit immediatelly.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.channelName">
+            <summary>
+            Channel name.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.sectionName">
+            <summary>
+            Name of the public (connector) section object.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.privateSectionName">
+            <summary>
+            Name of the private (connection) section object.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.listener">
+            <summary>
+            A thread that listens for incoming connections made through the <see cref="T:PHP.Core.ShmServerConnector"/>.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.autoEvent">
+            <summary>
+            A helper event that serializes <see cref="T:PHP.Core.ShmConnection"/> creation.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.serverSinkProvider">
+            <summary>
+            Server sink chain provider.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.transportSink">
+            <summary>
+            The server transport sink.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.connector">
+            <summary>
+            The <see cref="T:PHP.Core.ShmServerConnector"/> incoming connections are made through.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.shm">
+            <summary>
+            Recently created <see cref="T:PHP.Core.ShmConnection"/>. Used to pass <see cref="T:PHP.Core.ShmConnection"/> reference to
+            connection server threads.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.data">
+            <summary>
+            Stores channel-specific data.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.#ctor(System.String)">
+            <summary>
+            Creates a new <see cref="T:PHP.Core.ShmServerChannel"/>.
+            </summary>
+            <param name="name">Name of the shared (connector) section to listen on.</param>
+            <remarks>
+            The connector section name is an analogy of the port number in
+            <see cref="T:System.Runtime.Remoting.Channels.Tcp.TcpServerChannel"/>.
+            </remarks>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.#ctor(System.Collections.IDictionary,System.Runtime.Remoting.Channels.IServerChannelSinkProvider)">
+            <summary>
+            Creates a new <see cref="T:PHP.Core.ShmServerChannel"/> with given properties and sinks.
+            </summary>
+            <param name="properties">Properties of the channel.</param>
+            <param name="serverProviderChain">Sink providers for the channel.</param>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.InitProperties(System.Collections.IDictionary)">
+            <summary>
+            Initializes members of the instance according to given properties.
+            </summary>
+            <param name="properties">The properties.</param>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.InitProviders(System.Runtime.Remoting.Channels.IServerChannelSinkProvider)">
+            <summary>
+            Inititializes the provider sink chain.
+            </summary>
+            <param name="serverProviderChain">Additional sinks to be used with this channel.</param>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.CreateDefaultServerProviderChain">
+            <summary>
+            Creates the default server sink provider chain consisting of the 
+            <see cref="T:System.Runtime.Remoting.Channels.BinaryServerFormatterSinkProvider"/>.
+            </summary>
+            <returns>The sink provider chain.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.Parse(System.String,System.String@)">
+            <summary>
+            Returns the current channel URI and places object URI into out parameter.
+            </summary>
+            <param name="url">The URL of the object.</param>
+            <param name="objectUri">When this method returns, it contains a string that holds 
+            the object URI.</param>
+            <returns>The URI of the current channel, or a <B>null</B> reference if the URI does 
+            not belong to this channel.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.GetUrlsForUri(System.String)">
+            <summary>
+            Returns an array of all the URLs for a URI.
+            </summary>
+            <param name="objUri">The URI for which URLs are required.</param>
+            <returns>An array of the URLs.</returns>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.StartListening(System.Object)">
+            <summary>
+            Instructs the current channel to start listening for requests.
+            </summary>
+            <param name="data">Optional initialization information.</param>
+            <exception cref="T:PHP.Core.ShmIOException">Another server channel already listens on the given
+            <see cref="F:PHP.Core.ShmServerChannel.sectionName"/>.
+            </exception>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.StopListening(System.Object)">
+            <summary>
+            Instructs the current channel to stop listening for requests.
+            </summary>
+            <param name="data">Optional state information for the channel.</param>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.ListenerMain">
+            <summary>
+            Listens for incoming connections and starts server threads.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.ServerMain">
+            <summary>
+            Processes clients' method call requests.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.WriteClientResponse(PHP.Core.ShmConnection,System.Runtime.Remoting.Channels.ITransportHeaders,System.IO.Stream)">
+            <summary>
+            Processes clients' method call responses.
+            </summary>
+            <param name="connectedShm">The connection.</param>
+            <param name="headers">Transport headers.</param>
+            <param name="responseStream">Response stream.</param>
+        </member>
+        <member name="F:PHP.Core.ShmServerChannel.disposed">
+            <summary>
+            Tracks whether <see cref="M:PHP.Core.ShmServerChannel.Dispose(System.Boolean)"/> has been called.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.Dispose">
+            <summary>
+            Standard <see cref="M:System.IDisposable.Dispose"/> implementation.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.Dispose(System.Boolean)">
+            <summary>
+            Disposes of unmanaged and optionally also managed resources.
+            </summary>
+            <param name="disposing">If <B>true</B>, both managed and unmanaged resources should be released.
+            If <B>false</B> only unmanaged resources should be released.</param>
+        </member>
+        <member name="M:PHP.Core.ShmServerChannel.Finalize">
+            <summary>
+            Destructor that will run only if the <see cref="M:PHP.Core.ShmServerChannel.Dispose"/> method does not get called.
+            </summary>
+        </member>
+        <member name="P:PHP.Core.ShmServerChannel.ChannelName">
+            <summary>
+            Gets the name of the channel.
+            </summary>
+        </member>
+        <member name="P:PHP.Core.ShmServerChannel.ChannelPriority">
+            <summary>
+            Gets the priority of the channel.
+            </summary>
+        </member>
+        <member name="P:PHP.Core.ShmServerChannel.ChannelData">
+            <summary>
+            Gets the channel-specific data.
+            </summary>
+        </member>
+        <member name="T:PHP.Core.ShmServerTransportSink">
+            <summary>
+            Server transport sink.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerTransportSink.next">
+            <summary>
+            Next sink in the sink chain.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmServerTransportSink.#ctor(System.Runtime.Remoting.Channels.IServerChannelSink)">
+            <summary>
+            Creates a new ShmServerTransportSink.
+            </summary>
+            <param name="next">Next sink in the sink chain.</param>
+        </member>
+        <member name="M:PHP.Core.ShmServerTransportSink.ProcessMessage(System.Runtime.Remoting.Channels.IServerChannelSinkStack,System.Runtime.Remoting.Messaging.IMessage,System.Runtime.Remoting.Channels.ITransportHeaders,System.IO.Stream,System.Runtime.Remoting.Messaging.IMessage@,System.Runtime.Remoting.Channels.ITransportHeaders@,System.IO.Stream@)">
+            <summary>
+            Requests message processing from the current sink.
+            </summary>
+            <param name="sinkStack">A stack of channel sinks that called the current sink.</param>
+            <param name="requestMsg">The message that contains the request.</param>
+            <param name="requestHeaders">Headers retrieved from the incoming message from the client.
+            </param>
+            <param name="requestStream">The stream that needs to be to processed and passed on to the 
+            deserialization sink.</param>
+            <param name="msg">When this method returns, contains an <see cref="T:System.Runtime.Remoting.Messaging.IMessage"/> that holds the
+            response message.</param>
+            <param name="responseHeaders">When this method returns, contains an <see cref="T:System.Runtime.Remoting.Channels.ITransportHeaders"/>
+            that holds the headers that are to be added to return message heading to the client.</param>
+            <param name="responseStream">When this method returns, contains a <see cref="T:System.IO.Stream"/> that is
+            heading back to the transport sink.</param>
+            <returns>A <see cref="T:System.Runtime.Remoting.Channels.ServerProcessing"/> status value that provides information about how
+            message was processed.</returns>
+            <exception cref="T:System.NotSupportedException">Always, because it is no use calling
+            <see cref="M:PHP.Core.ShmServerTransportSink.ProcessMessage(System.Runtime.Remoting.Channels.IServerChannelSinkStack,System.Runtime.Remoting.Messaging.IMessage,System.Runtime.Remoting.Channels.ITransportHeaders,System.IO.Stream,System.Runtime.Remoting.Messaging.IMessage@,System.Runtime.Remoting.Channels.ITransportHeaders@,System.IO.Stream@)"/> on a server transport sink.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmServerTransportSink.AsyncProcessResponse(System.Runtime.Remoting.Channels.IServerResponseChannelSinkStack,System.Object,System.Runtime.Remoting.Messaging.IMessage,System.Runtime.Remoting.Channels.ITransportHeaders,System.IO.Stream)">
+            <summary>
+            Requests processing from the current sink of the response from a method call sent
+            asynchronously.
+            </summary>
+            <param name="sinkStack">A stack of sinks leading back to the server transport sink.
+            </param>
+            <param name="state">Information generated on the request side that is associated with this 
+            sink.</param>
+            <param name="msg">The response message.</param>
+            <param name="headers">The headers to add to the return message heading to the client.
+            </param>
+            <param name="stream">The stream heading back to the transport sink.</param>
+            <exception cref="T:System.NotSupportedException">Always, because it is no use calling
+            <see cref="M:PHP.Core.ShmServerTransportSink.AsyncProcessResponse(System.Runtime.Remoting.Channels.IServerResponseChannelSinkStack,System.Object,System.Runtime.Remoting.Messaging.IMessage,System.Runtime.Remoting.Channels.ITransportHeaders,System.IO.Stream)"/> on a server transport sink.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmServerTransportSink.GetResponseStream(System.Runtime.Remoting.Channels.IServerResponseChannelSinkStack,System.Object,System.Runtime.Remoting.Messaging.IMessage,System.Runtime.Remoting.Channels.ITransportHeaders)">
+            <summary>
+            Returns the <see cref="T:System.IO.Stream"/> onto which the provided response message is to be serialized.
+            </summary>
+            <param name="sinkStack">A stack of sinks leading back to the server transport sink.
+            </param>
+            <param name="state">The state that has been pushed to the stack by this sink.</param>
+            <param name="msg">The response message to serialize.</param>
+            <param name="headers">headers to put in the response stream to the client.</param>
+            <returns>The <see cref="T:System.IO.Stream"/> onto which the provided response message is to be serialized.
+            </returns>
+        </member>
+        <member name="P:PHP.Core.ShmServerTransportSink.Properties">
+            <summary>
+            Gets a dictionary through which properties on the sink can be accessed.
+            </summary>
+        </member>
+        <member name="P:PHP.Core.ShmServerTransportSink.NextChannelSink">
+            <summary>
+            Gets the next server channel sink in the server sink chain.
+            </summary>
+        </member>
+        <member name="T:PHP.Core.ShmConnectorBase">
+            <summary>
+            Shared memory connector. Abstract class, base of <see cref="T:PHP.Core.ShmClientConnector"/> and
+            <see cref="T:PHP.Core.ShmServerConnector"/>.
+            </summary>
+            <remarks>
+            Clients and servers use connectors to build private connections.
+            </remarks>
+        </member>
+        <member name="F:PHP.Core.ShmConnectorBase.CONNECTOR_SECTION_SIZE">
+            <summary>
+            Equal to MAX_PATH times 2 (Section name in Unicode).
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectorBase.waitTimeout">
+            <summary>Timeout when waiting for various synchronization objects.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectorBase.fileMappingPrefix">
+            <summary>Common prefix of <see cref="F:PHP.Core.ShmConnectorBase.connectSectionHandle"/> names.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectorBase.connRequestPrefix">
+            <summary>Common prefix of <see cref="F:PHP.Core.ShmConnectorBase.connectRequestEventHandle"/> names.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectorBase.connConfirmPrefix">
+            <summary>Common prefix of <see cref="F:PHP.Core.ShmConnectorBase.connectConfirmEventHandle"/> names.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectorBase.connMutexPrefix">
+            <summary>Common prefix of <see cref="F:PHP.Core.ShmConnectorBase.connectMutexHandle"/> names.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectorBase.connectSectionHandle">
+            <summary>Handle of the connector section object.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectorBase.connectRequestEventHandle">
+            <summary>Handle of the request event object.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectorBase.connectConfirmEventHandle">
+            <summary>Handle of the confirm event object.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectorBase.connectMutexHandle">
+            <summary>Handle of the request serializing mutex object.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmConnectorBase.viewAddr">
+            <summary>
+            Virtual address of the mapped view into <see cref="F:PHP.Core.ShmConnectorBase.connectSectionHandle"/>.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnectorBase.Dispose">
+            <summary>
+            Standard <see cref="M:System.IDisposable.Dispose"/> implementation.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmConnectorBase.Dispose(System.Boolean)">
+            <summary>
+            Disposes of unmanaged and optionally also managed resources.
+            </summary>
+            <param name="disposing">If <B>true</B>, both managed and unmanaged resources should be released.
+            If <B>false</B> only unmanaged resources should be released.</param>
+        </member>
+        <member name="M:PHP.Core.ShmConnectorBase.Finalize">
+            <summary>
+            Destructor that will run only if the <see cref="M:PHP.Core.ShmConnectorBase.Dispose"/> method does not get called.
+            </summary>
+        </member>
+        <member name="T:PHP.Core.ShmServerConnector">
+            <summary>
+            Shared memory connector, the server end.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmServerConnector.requestPending">
+            <summary>
+            If <B>true</B>, an incoming request was recognized but not yet confirmed.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmServerConnector.#ctor(System.String)">
+            <summary>
+            Constructs a new <see cref="T:PHP.Core.ShmServerConnector"/>.
+            </summary>
+            <param name="sectionName">The section name.</param>
+            <exception cref="T:PHP.Core.ShmIOException">Creation of unmanaged resources failed.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmServerConnector.WaitForConnect(System.IntPtr)">
+            <summary>
+            Listens for an incoming connection.
+            </summary>
+            <param name="stopWaitingEvent">The event that signalizes that waiting should be aborted.</param>
+            <returns><B>True</B> if a request was received, <B>false</B> if waiting was aborted because
+            <paramref name="stopWaitingEvent"/> having been set.</returns>
+            <exception cref="T:System.InvalidOperationException">A request is already pending and must be confirmed before
+            waiting for another connection.</exception>
+            <exception cref="T:PHP.Core.ShmIOException">Waiting for <see cref="F:PHP.Core.ShmConnectorBase.connectRequestEventHandle"/>
+            failed.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmServerConnector.ConfirmConnect(System.String)">
+            <summary>
+            Confirms the incoming connection.
+            </summary>
+            <param name="name">Private section name to be passed to the connecting side.</param>
+            <remarks>
+            If no request is pending, <see cref="M:PHP.Core.ShmServerConnector.WaitForConnect(System.IntPtr)"/> is called first.
+            </remarks>
+            <exception cref="T:System.ArgumentException"><paramref name="name"/> is longer than
+            <see cref="F:PHP.Core.ShmConnectorBase.CONNECTOR_SECTION_SIZE"/>.
+            </exception>
+        </member>
+        <member name="M:PHP.Core.ShmServerConnector.Dispose(System.Boolean)">
+            <summary>
+            Performs disposal tasks specific for <see cref="T:PHP.Core.ShmServerConnector"/>.
+            </summary>
+            <param name="disposing">If <B>true</B>, both managed and unmanaged resources should be released.
+            </param>
+        </member>
+        <member name="T:PHP.Core.ShmClientConnector">
+            <summary>
+            Shared memory connector, the client end.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmClientConnector.#ctor(System.String)">
+            <summary>
+            Constructs a new <see cref="T:PHP.Core.ShmClientConnector"/>.
+            </summary>
+            <param name="sectionName">The section name.</param>
+            <exception cref="T:PHP.Core.ShmIOException">Creation of unmanaged resources failed.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmClientConnector.Connect">
+            <summary>
+            Tries to connect to the server end and obtain a private file mapping name.
+            </summary>
+            <returns>Private file mapping name to be used for the new connection.</returns>
+            <exception cref="T:PHP.Core.ShmIOException">Waiting for <see cref="F:PHP.Core.ShmConnectorBase.connectMutexHandle"/> or
+            <see cref="F:PHP.Core.ShmConnectorBase.connectConfirmEventHandle"/> failed.</exception>
+        </member>
+        <member name="T:PHP.Core.ShmNative">
+            <summary>
+            Container for shared memory and synchronization native functions.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.ERROR_ALREADY_EXISTS">
+            <summary>The ERROR_ALREADY_EXISTS Win32 error code.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.PAGE_READONLY">
+            <summary><c>flProtect</c> flag for <see cref="M:PHP.Core.ShmNative.CreateFileMapping(System.IntPtr,System.IntPtr,System.UInt32,System.UInt32,System.UInt32,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.PAGE_READWRITE">
+            <summary><c>flProtect</c> flag for <see cref="M:PHP.Core.ShmNative.CreateFileMapping(System.IntPtr,System.IntPtr,System.UInt32,System.UInt32,System.UInt32,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.PAGE_WRITECOPY">
+            <summary><c>flProtect</c> flag for <see cref="M:PHP.Core.ShmNative.CreateFileMapping(System.IntPtr,System.IntPtr,System.UInt32,System.UInt32,System.UInt32,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.SEC_COMMIT">
+            <summary><c>flProtect</c> flag for <see cref="M:PHP.Core.ShmNative.CreateFileMapping(System.IntPtr,System.IntPtr,System.UInt32,System.UInt32,System.UInt32,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.SEC_IMAGE">
+            <summary><c>flProtect</c> flag for <see cref="M:PHP.Core.ShmNative.CreateFileMapping(System.IntPtr,System.IntPtr,System.UInt32,System.UInt32,System.UInt32,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.SEC_NOCACHE">
+            <summary><c>flProtect</c> flag for <see cref="M:PHP.Core.ShmNative.CreateFileMapping(System.IntPtr,System.IntPtr,System.UInt32,System.UInt32,System.UInt32,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.SEC_RESERVE">
+            <summary><c>flProtect</c> flag for <see cref="M:PHP.Core.ShmNative.CreateFileMapping(System.IntPtr,System.IntPtr,System.UInt32,System.UInt32,System.UInt32,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.FILE_MAP_WRITE">
+            <summary><c>dwDesiredAccess</c> flag for <see cref="M:PHP.Core.ShmNative.OpenFileMapping(System.UInt32,System.Boolean,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.FILE_MAP_READ">
+            <summary><c>dwDesiredAccess</c> flag for <see cref="M:PHP.Core.ShmNative.OpenFileMapping(System.UInt32,System.Boolean,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.FILE_MAP_ALL_ACCESS">
+            <summary><c>dwDesiredAccess</c> flag for <see cref="M:PHP.Core.ShmNative.OpenFileMapping(System.UInt32,System.Boolean,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.FILE_MAP_COPY">
+            <summary><c>dwDesiredAccess</c> flag for <see cref="M:PHP.Core.ShmNative.OpenFileMapping(System.UInt32,System.Boolean,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.EVENT_ALL_ACCESS">
+            <summary><c>dwDesiredAccess</c> flag for <see cref="M:PHP.Core.ShmNative.OpenEvent(System.UInt32,System.Boolean,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.EVENT_MODIFY_STATE">
+            <summary><c>dwDesiredAccess</c> flag for <see cref="M:PHP.Core.ShmNative.OpenEvent(System.UInt32,System.Boolean,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.SYNCHRONIZE">
+            <summary><c>dwDesiredAccess</c> flag for <see cref="M:PHP.Core.ShmNative.OpenEvent(System.UInt32,System.Boolean,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.MUTEX_ALL_ACCESS">
+            <summary><c>dwDesiredAccess</c> flag for <see cref="M:PHP.Core.ShmNative.OpenMutex(System.UInt32,System.Boolean,System.String)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.INFINITE">
+            <summary>
+            <c>dwMilliseconds</c> special value for <see cref="M:PHP.Core.ShmNative.WaitForSingleObject(System.IntPtr,System.UInt32)"/> and
+            <see cref="M:PHP.Core.ShmNative.WaitForMultipleObjects(System.UInt32,System.IntPtr[],System.Boolean,System.UInt32)"/>.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.WAIT_ABANDONED">
+            <summary><see cref="M:PHP.Core.ShmNative.WaitForSingleObject(System.IntPtr,System.UInt32)"/> return value.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.WAIT_ABANDONED_0">
+            <summary><see cref="M:PHP.Core.ShmNative.WaitForSingleObject(System.IntPtr,System.UInt32)"/> return value.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.WAIT_OBJECT_0">
+            <summary><see cref="M:PHP.Core.ShmNative.WaitForSingleObject(System.IntPtr,System.UInt32)"/> return value.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.WAIT_TIMEOUT">
+            <summary><see cref="M:PHP.Core.ShmNative.WaitForSingleObject(System.IntPtr,System.UInt32)"/> return value.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.WAIT_FAILED">
+            <summary><see cref="M:PHP.Core.ShmNative.WaitForSingleObject(System.IntPtr,System.UInt32)"/> return value.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.FORMAT_MESSAGE_ALLOCATE_BUFFER">
+            <summary><c>dwFlags</c> flag for <see cref="M:PHP.Core.ShmNative.FormatMessage(System.UInt32,System.IntPtr,System.UInt32,System.UInt32,System.String@,System.UInt32,System.IntPtr)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.FORMAT_MESSAGE_IGNORE_INSERTS">
+            <summary><c>dwFlags</c> flag for <see cref="M:PHP.Core.ShmNative.FormatMessage(System.UInt32,System.IntPtr,System.UInt32,System.UInt32,System.String@,System.UInt32,System.IntPtr)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.FORMAT_MESSAGE_FROM_STRING">
+            <summary><c>dwFlags</c> flag for <see cref="M:PHP.Core.ShmNative.FormatMessage(System.UInt32,System.IntPtr,System.UInt32,System.UInt32,System.String@,System.UInt32,System.IntPtr)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.FORMAT_MESSAGE_FROM_HMODULE">
+            <summary><c>dwFlags</c> flag for <see cref="M:PHP.Core.ShmNative.FormatMessage(System.UInt32,System.IntPtr,System.UInt32,System.UInt32,System.String@,System.UInt32,System.IntPtr)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.FORMAT_MESSAGE_FROM_SYSTEM">
+            <summary><c>dwFlags</c> flag for <see cref="M:PHP.Core.ShmNative.FormatMessage(System.UInt32,System.IntPtr,System.UInt32,System.UInt32,System.String@,System.UInt32,System.IntPtr)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.FORMAT_MESSAGE_ARGUMENT_ARRAY">
+            <summary><c>dwFlags</c> flag for <see cref="M:PHP.Core.ShmNative.FormatMessage(System.UInt32,System.IntPtr,System.UInt32,System.UInt32,System.String@,System.UInt32,System.IntPtr)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.FORMAT_MESSAGE_MAX_WIDTH_MASK">
+            <summary><c>dwFlags</c> flag for <see cref="M:PHP.Core.ShmNative.FormatMessage(System.UInt32,System.IntPtr,System.UInt32,System.UInt32,System.String@,System.UInt32,System.IntPtr)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.LANG_NEUTRAL_SUBLANG_DEFAULT">
+            <summary><c>dwLanguageId</c> value for <see cref="M:PHP.Core.ShmNative.FormatMessage(System.UInt32,System.IntPtr,System.UInt32,System.UInt32,System.String@,System.UInt32,System.IntPtr)"/>.</summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.securityAttributes">
+            <summary>
+            The security attributes unmanaged resources will be created with.
+            </summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.#cctor">
+            <summary>
+            Static constructor. Initializes <see cref="F:PHP.Core.ShmNative.securityAttributes"/>.
+            </summary>
+            <exception cref="T:PHP.Core.ShmIOException">Initialization of unmanaged resources failed.</exception>
+        </member>
+        <member name="F:PHP.Core.ShmNative.INVALID_HANDLE_VALUE">
+            <summary>Value of an invalid handle.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.CreateFileMapping(System.IntPtr,System.IntPtr,System.UInt32,System.UInt32,System.UInt32,System.String)">
+            <summary><c>CreateFileMapping</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.OpenFileMapping(System.UInt32,System.Boolean,System.String)">
+            <summary><c>OpenFileMapping</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.MapViewOfFile(System.IntPtr,System.UInt32,System.UInt32,System.UInt32,System.UInt32)">
+            <summary><c>MapViewOfFile</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.UnmapViewOfFile(System.IntPtr)">
+            <summary><c>UnmapViewOfFile</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.CloseHandle(System.IntPtr)">
+            <summary><c>CloseHandle</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.CreateEvent(System.IntPtr,System.Boolean,System.Boolean,System.String)">
+            <summary><c>CreateEvent</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.OpenEvent(System.UInt32,System.Boolean,System.String)">
+            <summary><c>OpenEvent</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.SetEvent(System.IntPtr)">
+            <summary><c>SetEvent</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.ResetEvent(System.IntPtr)">
+            <summary><c>ResetEvent</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.PulseEvent(System.IntPtr)">
+            <summary><c>PulseEvent</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.CreateMutex(System.IntPtr,System.Boolean,System.String)">
+            <summary><c>CreateMutex</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.OpenMutex(System.UInt32,System.Boolean,System.String)">
+            <summary><c>OpenMutext</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.ReleaseMutex(System.IntPtr)">
+            <summary><c>ReleaseMutex</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.OpenThread(System.UInt32,System.Boolean,System.UInt32)">
+            <summary><c>OpenThread</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.WaitForSingleObject(System.IntPtr,System.UInt32)">
+            <summary><c>WaitForSingleObject</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.WaitForMultipleObjects(System.UInt32,System.IntPtr[],System.Boolean,System.UInt32)">
+            <summary><c>WaitForMultipleObjects</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.InitializeSecurityDescriptor(System.IntPtr,System.UInt32)">
+            <summary><c>InitializeSecurityDescriptor</c> API function imported from <c>advapi32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.SetSecurityDescriptorDacl(System.IntPtr,System.Boolean,System.IntPtr,System.Boolean)">
+            <summary><c>SetSecurityDescriptorDacl</c> API function imported from <c>advapi32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.FormatMessage(System.UInt32,System.IntPtr,System.UInt32,System.UInt32,System.String@,System.UInt32,System.IntPtr)">
+            <summary><c>FormatMessage</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.LocalFree(System.IntPtr)">
+            <summary><c>LocalFree</c> API function imported from <c>kernel32.dll</c>.</summary>
+        </member>
+        <member name="M:PHP.Core.ShmNative.CreateNamedEvent(System.String,System.Boolean)">
+            <summary>
+            Creates a named event. The reason for this is that the framework supports only unnamed 
+            events (see <see cref="T:System.Threading.AutoResetEvent"/>).
+            </summary>
+            <param name="name">The name of the event.</param>
+            <param name="signaled">Initial state of the event.</param>
+            <returns>Handle of the created event.</returns>
+            <exception cref="T:PHP.Core.ShmIOException">Could not create the event.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmNative.OpenNamedEvent(System.String)">
+            <summary>
+            Opens a named event. The reason for this is that the framework supports only unnamed events 
+            (see <see cref="T:System.Threading.AutoResetEvent"/>).
+            </summary>
+            <param name="name">The name of the event.</param>
+            <returns>Handle of the opened event.</returns>
+            <exception cref="T:PHP.Core.ShmIOException">Could not open the event.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmNative.CreateNamedMutex(System.String,System.Boolean)">
+            <summary>
+            Creates a named mutex.
+            </summary>
+            <param name="name">The name of the mutex.</param>
+            <param name="initialOwner">Specifies whether the calling thread should become an owner of
+            this mutex.</param>
+            <returns>Handle of the created mutex.</returns>
+            <exception cref="T:PHP.Core.ShmIOException">Could not create the mutex.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmNative.OpenNamedMutex(System.String)">
+            <summary>
+            Opens a named mutex.
+            </summary>
+            <param name="name">The name of the mutex.</param>
+            <returns>Handle of the opened mutex.</returns>
+            <exception cref="T:PHP.Core.ShmIOException">Could not open the mutex.</exception>
+        </member>
+        <member name="M:PHP.Core.ShmNative.CloseHandleOnce(System.IntPtr@)">
+            <summary>
+            Closes a handle at most once.
+            </summary>
+            <param name="handle">The handle to close.</param>
+        </member>
+        <member name="M:PHP.Core.ShmNative.GetErrorString(System.Int32)">
+            <summary>
+            Returns error message according to a Win32 error code.
+            </summary>
+            <param name="errorCode">The error code.</param>
+            <returns>The error message.</returns>
+        </member>
+        <member name="T:PHP.Core.ShmNative.SECURITY_ATTRIBUTES">
+            <summary>
+            Managed definition of the <c>SECURITY_ATTRIBUTES</c> structure used when creating unmanaged resources.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.SECURITY_ATTRIBUTES.nLength">
+            <summary>
+            The size, in bytes, of this structure.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.SECURITY_ATTRIBUTES.lpSecurityDescriptor">
+            <summary>
+            Pointer to a security descriptor.
+            </summary>
+        </member>
+        <member name="F:PHP.Core.ShmNative.SECURITY_ATTRIBUTES.bInheritHandle">
+            <summary>
+            Specifies whether the returned handle is inherited when a new process is created.
+            </summary>
+        </member>
+    </members>
+</doc>

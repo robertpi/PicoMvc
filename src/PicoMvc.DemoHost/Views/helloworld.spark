@@ -1,0 +1,9 @@
+<html>
+  <head>
+    <title>Spark with PicoMvc sample view</title>
+  </head>
+  <body>
+    <h2>Hello, ${model}</h2>
+    <p>To learn more about PicoMvc visit <a title="PicoMvc Website" href="http://github.net/robertpi/picomvc">http://github.net/robertpi/picomvc</a>.</p>
+  </body>  
+</html>

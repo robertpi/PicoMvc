@@ -1,0 +1,4 @@
+PicoMvc
+
+A thin veneer of F#ness arround several different frameworks to make a light weight Mvc framework.
+
