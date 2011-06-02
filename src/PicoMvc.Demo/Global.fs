@@ -17,7 +17,7 @@ type Global() =
         //let routingTables = routingTables.AddHandler(("",""), (fun x y -> x + y))
         let actions =
             { TreatParameterAction = [ ControllerMapper.defaultParameterAction; NewtonsoftJson.defaultJsonRecordParameterAction ]
-              TreatResultAction = [ Phalanger.defaultPhalangerResultAction; Spark.defaultSparkResultAction; NewtonsoftJson.defaultJsonResultAction ] }
+              TreatResultAction = [ Spark.defaultSparkResultAction; Phalanger.defaultPhalangerResultAction; NewtonsoftJson.defaultJsonResultAction ] }
         routes.Add(new Route("{*url}", new PicoMvcRouteHandler("url", routingTables, actions)))
 
     member x.Start() =
