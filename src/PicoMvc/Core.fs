@@ -7,6 +7,7 @@ open System.Web.Routing
 open System.Web.SessionState
 open System.Reflection
 open Microsoft.FSharp.Reflection
+open Strangelights.Log4f
 type Dictionary<'a, 'b> = System.Collections.Generic.Dictionary<'a, 'b>
 
 type ControlerAttribute() =
@@ -25,7 +26,7 @@ type ErrorMessage =
 
 type RoutingTable(handlersMap: Map<string * string, (string*Type)[] * (obj[] -> obj)> ) =
     static let httpVerbs = [ "get"; "put"; "post"; "delete"; ]
-    static let logger = log4net.LogManager.GetLogger(typeof<RoutingTable>)
+    static let logger = LogManager.getLogger()
 
     member x.GetHandlerFunction (verb: string) url =
         let key = verb.ToLowerInvariant(), url
@@ -35,13 +36,13 @@ type RoutingTable(handlersMap: Map<string * string, (string*Type)[] * (obj[] -> 
         else None
 
     static member LoadFromAssemblies(assems: Assembly[]) =
-        do for assem in assems do logger.InfoFormat("Checking for controlers: {0}", assem.FullName)
+        do for assem in assems do logger.Info "Checking for controlers: %s" assem.FullName
 
         let rootHandlerModules =
             assems 
             |> Seq.collect (fun assem -> assem.GetTypes())
             |> Seq.filter (fun typ -> FSharpType.IsModule typ && typ.IsDefined(typeof<ControlerAttribute>, false))
-        do for handler in rootHandlerModules do logger.InfoFormat("Found root handler: {0}", handler.FullName)
+        do for handler in rootHandlerModules do logger.Info "Found root handler: %s" handler.FullName
 
         let rec walkSubHandlers (types: seq<Type>) =
             seq { for typ in types do
@@ -70,7 +71,7 @@ type RoutingTable(handlersMap: Map<string * string, (string*Type)[] * (obj[] -> 
                             httpVerbs 
                             |> Seq.choose (fun verb ->  handlerFromType typ verb |> Option.map (fun x -> (verb, urlOfName typ), x) ))
             |> Map.ofSeq
-        do for entry in handlersMap do logger.InfoFormat("Found handler, (verb, url):{0}", entry.Key)
+        do for entry in handlersMap do logger.Info "Found handler, (verb, url):%A" entry.Key
         new RoutingTable(handlersMap)
 
     static member LoadFromCurrentAssemblies() =
@@ -120,7 +121,7 @@ type IOActions =
 
 module ControllerMapper =
     type t = class end
-    let logger = log4net.LogManager.GetLogger(typeof<t>)
+    let logger = LogManager.getLogger()
 
     let defaultParameterAction  =
         let canTreat (context: PicoContext) name _ =
@@ -138,7 +139,7 @@ module ControllerMapper =
     let handleRequest (routingTables: RoutingTable) (context: PicoContext) (ioActions: IOActions) =
         let path = context.Request.UrlPart
 
-        do logger.InfoFormat("Processing {0} request for {1}", context.Request.Verb, path)
+        logger.Info "Processing %s request for %s" context.Request.Verb path
 
         let handler = routingTables.GetHandlerFunction context.Request.Verb path
         let parameterOfType (name:string, t:Type) = 
@@ -151,19 +152,18 @@ module ControllerMapper =
 
         match handler with
         | Some (parametersTypes, handler) ->
-            //logger.InfoFormat("Got handler {0}, {1} for {2} request for {3}", handler.Name, handler.DeclaringType.FullName, context.Request.Verb, path)
             let parameters =
                 parametersTypes
                 |> Array.map parameterOfType
             let paramPair = Seq.zip parametersTypes parameters |> Seq.map(fun ((name,_), v) -> sprintf "%s: %A" name v)
-            logger.InfoFormat("Parameters for {0} request for {1}: {2}", context.Request.Verb, path, String.Join(", ", paramPair))
+            logger.Info "Parameters for %s request for %s: %s" context.Request.Verb path (String.Join(", ", paramPair))
             let res = 
                 try
                     let res = handler(parameters) :?> ControlerResult
-                    logger.InfoFormat("Successfully handled {0} request for {1}", context.Request.Verb, path)
+                    logger.Info "Successfully handled %s request for %s" context.Request.Verb path
                     res
                 with ex -> 
-                    logger.ErrorFormat("Error handling {0} request for {1}, error was", context.Request.Verb, path, ex)
+                    logger.Error(ex, "Error handling %s request for %s, error was") context.Request.Verb path
                     Error (500, (ex.ToString()))
             let treatResult obj =
                 let res =
@@ -180,7 +180,7 @@ module ControllerMapper =
                 treatResult res
             | NoResult -> ()
         | None ->
-            logger.WarnFormat("Did not find handler for {0} request for {1}", context.Request.Verb, path)
+            logger.Warn "Did not find handler for %s request for %s" context.Request.Verb path
             // TODO raising an http exception doesn't really seem to work, why?
             //raise (new HttpException("not found", 404)) 
             context.Response.SetStatusCode 404

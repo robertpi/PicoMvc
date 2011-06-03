@@ -5,6 +5,7 @@ open System.Text
 open System.Web
 open System.Web.Routing
 open System.Web.SessionState
+open Strangelights.Log4f
 
 module AspNet =
     let processRequest (urlName: string) (routingTables: RoutingTable) (encoding: Encoding) (requestContext: RequestContext) (httpContext:HttpContext) actions =
@@ -23,7 +24,7 @@ module AspNet =
 
 // takes a function that defines how the http request is handled
 type PicoMvcRouteHandler(urlName: string, routingTables: RoutingTable, actions, ?encoding: Encoding) =
-    static let logger = log4net.LogManager.GetLogger(typeof<PicoMvcRouteHandler>)
+    static let logger = LogManager.getLogger()
 
     let encoding = match encoding with None -> System.Text.Encoding.UTF8 | Some x -> x
 
