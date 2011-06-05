@@ -14,7 +14,7 @@ type Global() =
 
     static member RegisterRoutes(routes:RouteCollection) =
         let routingTables = RoutingTable.LoadFromCurrentAssemblies()
-        let routingTables = routingTables.AddHandler(("get","/"), (fun () -> Result "hello"))
+        let routingTables = routingTables.AddStaticHandler(("get","/"), (fun () -> Result "hello"))
         let actions =
             { TreatParameterAction = [ ControllerMapper.defaultParameterAction; NewtonsoftJson.defaultJsonRecordParameterAction ]
               TreatResultAction = [ Spark.defaultSparkResultAction; Phalanger.defaultPhalangerResultAction; NewtonsoftJson.defaultJsonResultAction ] }

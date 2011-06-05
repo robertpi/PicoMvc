@@ -13,6 +13,9 @@ type Dictionary<'a, 'b> = System.Collections.Generic.Dictionary<'a, 'b>
 type ControllerAttribute() =
     inherit Attribute()
 
+type DynamicControllerAttribute() =
+    inherit Attribute()
+
 
 type ControllerResult =
     | Result of obj
@@ -23,25 +26,55 @@ type ErrorMessage =
     { Code: int
       Error: string }
 
+type PicoRequest(urlPart: string, urlExtension: string: string, verb: string, parameters: Dictionary<string, string>, rawStream: Stream, requestStream: StreamReader) =
+    member x.UrlPart = urlPart
+    member x.UrlExtension = urlExtension
+    member x.Verb = verb
+    member x.Parameters = parameters
+    member x.RawStream = rawStream
+    member x.RequestStream = requestStream
 
-type RoutingTable private (handlersMap: Map<string * string, (string*Type)[] * (obj[] -> obj)> ) =
+type PicoResponse(rawStream: Stream, responceStream: StreamWriter, setStatusCode: int -> unit) =
+    member x.RawStream = rawStream
+    member x.ResponceStream = responceStream
+    member x.SetStatusCode code = setStatusCode code
+
+type PicoContext(request: PicoRequest, response: PicoResponse) =
+    member x.Request = request
+    member x.Response = response
+
+
+type RoutingTable private (staticHandlersMap: Map<string * string, (string*Type)[] * (obj[] -> obj)>, dynamicHandlers) =
     static let httpVerbs = [ "get"; "put"; "post"; "delete"; ]
     static let logger = LogManager.getLogger()
 
+    let getDynamicFunction func =
+        let t = func.GetType()
+        if FSharpType.IsFunction t then
+            let invokeMethod = t.GetMethod("Invoke")
+            let parameters = invokeMethod.GetParameters() |> Seq.map (fun x -> x.Name, x.ParameterType) |> Seq.toArray
+            let invoke = fun parameters -> invokeMethod.Invoke(func, parameters)
+            parameters, invoke
+        else failwith "not a function"
+
     member x.GetHandlerFunction (verb: string) url =
         let key = verb.ToLowerInvariant(), url
-        if handlersMap.ContainsKey key then
-            let handler = handlersMap.[key]
+        if staticHandlersMap.ContainsKey key then
+            let handler = staticHandlersMap.[key]
             Some handler
-        else None
+        else
+            List.tryFind (fun (accpetFunc, _) -> accpetFunc verb url) dynamicHandlers
+            |> Option.map snd
 
     static member LoadFromAssemblies(assems: Assembly[]) =
         do for assem in assems do logger.Info "Checking for Controllers: %s" assem.FullName
 
-        let rootHandlerModules =
+        let fsModules =
             assems 
             |> Seq.collect (fun assem -> assem.GetTypes())
-            |> Seq.filter (fun typ -> FSharpType.IsModule typ && typ.IsDefined(typeof<ControllerAttribute>, false))
+            |> Seq.filter (fun typ -> FSharpType.IsModule typ)
+            |> Seq.toList
+        let rootHandlerModules = fsModules |> Seq.filter (fun typ -> typ.IsDefined(typeof<ControllerAttribute>, false))
         do for handler in rootHandlerModules do logger.Info "Found root handler: %s" handler.FullName
 
         let rec walkSubHandlers (types: seq<Type>) =
@@ -71,38 +104,39 @@ type RoutingTable private (handlersMap: Map<string * string, (string*Type)[] * (
                             httpVerbs 
                             |> Seq.choose (fun verb ->  handlerFromType typ verb |> Option.map (fun x -> (verb, urlOfName typ), x) ))
             |> Map.ofSeq
-        do for entry in handlersMap do logger.Info "Found handler, (verb, url):%A" entry.Key
-        new RoutingTable(handlersMap)
+        do for entry in handlersMap do logger.Info "Found handler, (verb, url): %A" entry.Key
+
+        let dynamicHandlerModules = fsModules |> Seq.filter (fun typ -> typ.IsDefined(typeof<DynamicControllerAttribute>, false))
+        do for handler in rootHandlerModules do logger.Info "Found dynamic handler: %s" handler.FullName
+
+        let getDynamicHandler (typ: Type) =
+            let acceptFunc = typ.GetMethod("accept", BindingFlags.Static ||| BindingFlags.Public)
+            let func = typ.GetMethod("handle", BindingFlags.Static ||| BindingFlags.Public)
+            if acceptFunc = null || func = null then
+                failwithf "didn't find 'accept' and 'handle' in module %s" typ.Name
+            // TODO map rough generic parameters to string ?
+            let parameters = func.GetParameters() |> Array.map (fun p -> p.Name, p.ParameterType)
+            let acceptFunc = fun (verb: string) (url: string) -> acceptFunc.Invoke(null, [| verb :> obj; url :> obj|]) :?> bool
+            let func = parameters, fun parameters -> func.Invoke(null, parameters)
+            acceptFunc, func
+
+        let dynamicHandlers = dynamicHandlerModules |> Seq.map getDynamicHandler |> Seq.toList
+
+        new RoutingTable(handlersMap, dynamicHandlers)
 
     static member LoadFromCurrentAssemblies() =
         let assems = AppDomain.CurrentDomain.GetAssemblies()
         RoutingTable.LoadFromAssemblies assems
-    member x.AddHandler((verb, url), func) =
-        let t = func.GetType()
-        if FSharpType.IsFunction t then
-            let invokeMethod = t.GetMethod("Invoke")
-            let parameters = invokeMethod.GetParameters() |> Seq.map (fun x -> x.Name, x.ParameterType) |> Seq.toArray
-            let invoke = fun parameters -> invokeMethod.Invoke(func, parameters)
-            let handlersMap' = handlersMap.Add((verb, url), (parameters, invoke))
-            new RoutingTable(handlersMap')
-        else failwith "not a function"
 
-type PicoRequest(urlPart: string, urlExtension: string: string, verb: string, parameters: Dictionary<string, string>, rawStream: Stream, requestStream: StreamReader) =
-    member x.UrlPart = urlPart
-    member x.UrlExtension = urlExtension
-    member x.Verb = verb
-    member x.Parameters = parameters
-    member x.RawStream = rawStream
-    member x.RequestStream = requestStream
+    member x.AddStaticHandler((verb, url), func) =
+        let dynamicFunc = getDynamicFunction func
+        let handlersMap' = staticHandlersMap.Add((verb, url), dynamicFunc)
+        new RoutingTable(handlersMap', dynamicHandlers)
 
-type PicoResponse(rawStream: Stream, responceStream: StreamWriter, setStatusCode: int -> unit) =
-    member x.RawStream = rawStream
-    member x.ResponceStream = responceStream
-    member x.SetStatusCode code = setStatusCode code
-
-type PicoContext(request: PicoRequest, response: PicoResponse) =
-    member x.Request = request
-    member x.Response = response
+    member x.AddDynamicHandler(acceptFunc: string -> string -> bool, func) =
+        let dynamicFunc = getDynamicFunction func
+        let handlersMap' = (acceptFunc, dynamicFunc) :: dynamicHandlers
+        new RoutingTable(staticHandlersMap, handlersMap')
      
 type ParameterAction =
     { CanTreatParameter: PicoContext -> string -> Type -> bool
@@ -117,7 +151,6 @@ type IOActions =
       TreatResultAction: List<ResultAction> }
 
 module ControllerMapper =
-    type t = class end
     let logger = LogManager.getLogger()
 
     let defaultParameterAction  =
