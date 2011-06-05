@@ -10,11 +10,11 @@ open Microsoft.FSharp.Reflection
 open Strangelights.Log4f
 type Dictionary<'a, 'b> = System.Collections.Generic.Dictionary<'a, 'b>
 
-type ControlerAttribute() =
+type ControllerAttribute() =
     inherit Attribute()
 
 
-type ControlerResult =
+type ControllerResult =
     | Result of obj
     | NoResult
     | Error of int * string
@@ -24,7 +24,7 @@ type ErrorMessage =
       Error: string }
 
 
-type RoutingTable(handlersMap: Map<string * string, (string*Type)[] * (obj[] -> obj)> ) =
+type RoutingTable private (handlersMap: Map<string * string, (string*Type)[] * (obj[] -> obj)> ) =
     static let httpVerbs = [ "get"; "put"; "post"; "delete"; ]
     static let logger = LogManager.getLogger()
 
@@ -36,12 +36,12 @@ type RoutingTable(handlersMap: Map<string * string, (string*Type)[] * (obj[] -> 
         else None
 
     static member LoadFromAssemblies(assems: Assembly[]) =
-        do for assem in assems do logger.Info "Checking for controlers: %s" assem.FullName
+        do for assem in assems do logger.Info "Checking for Controllers: %s" assem.FullName
 
         let rootHandlerModules =
             assems 
             |> Seq.collect (fun assem -> assem.GetTypes())
-            |> Seq.filter (fun typ -> FSharpType.IsModule typ && typ.IsDefined(typeof<ControlerAttribute>, false))
+            |> Seq.filter (fun typ -> FSharpType.IsModule typ && typ.IsDefined(typeof<ControllerAttribute>, false))
         do for handler in rootHandlerModules do logger.Info "Found root handler: %s" handler.FullName
 
         let rec walkSubHandlers (types: seq<Type>) =
@@ -79,16 +79,11 @@ type RoutingTable(handlersMap: Map<string * string, (string*Type)[] * (obj[] -> 
         RoutingTable.LoadFromAssemblies assems
     member x.AddHandler((verb, url), func) =
         let t = func.GetType()
-        let rec getFunctionParameters acc t =
-            if FSharpType.IsFunction t then
-                let t, t' = FSharpType.GetFunctionElements t
-                getFunctionParameters (t' :: acc) t
-            else 
-                List.rev (t :: acc) |> List.map (fun x -> "", x) |> List.toArray
-        //FSharpValue.MakeFunction(
         if FSharpType.IsFunction t then
-            let parameters = getFunctionParameters [] t
-            let handlersMap' = handlersMap.Add((verb, url), func)
+            let invokeMethod = t.GetMethod("Invoke")
+            let parameters = invokeMethod.GetParameters() |> Seq.map (fun x -> x.Name, x.ParameterType) |> Seq.toArray
+            let invoke = fun parameters -> invokeMethod.Invoke(func, parameters)
+            let handlersMap' = handlersMap.Add((verb, url), (parameters, invoke))
             new RoutingTable(handlersMap')
         else failwith "not a function"
 
@@ -159,7 +154,7 @@ module ControllerMapper =
             logger.Info "Parameters for %s request for %s: %s" context.Request.Verb path (String.Join(", ", paramPair))
             let res = 
                 try
-                    let res = handler(parameters) :?> ControlerResult
+                    let res = handler(parameters) :?> ControllerResult
                     logger.Info "Successfully handled %s request for %s" context.Request.Verb path
                     res
                 with ex -> 

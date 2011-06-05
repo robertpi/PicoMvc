@@ -12,9 +12,14 @@ module AspNet =
         let dict = new Dictionary<string, string>()
         for x in httpContext.Request.Params.AllKeys do dict.Add(x, httpContext.Request.Params.[x])
         let fullUrl = string requestContext.RouteData.Values.[urlName]
-        let dir, file = Path.GetDirectoryName fullUrl, Path.GetFileNameWithoutExtension fullUrl
-        let urlPart = Path.Combine(dir, file)
-        let urlExtension = Path.GetExtension fullUrl
+        let urlPart, urlExtension  = 
+            if String.IsNullOrEmpty fullUrl || fullUrl = "/" then
+                "/", ""
+            else 
+                let dir, file = Path.GetDirectoryName fullUrl, Path.GetFileNameWithoutExtension fullUrl
+                let urlPart = Path.Combine(dir, file)
+                let urlExtension = Path.GetExtension fullUrl
+                urlPart, urlExtension
         let request = new PicoRequest(urlPart, urlExtension, httpContext.Request.HttpMethod, dict, new StreamReader(httpContext.Request.InputStream, httpContext.Request.ContentEncoding))
         use outstream = new StreamWriter(httpContext.Response.OutputStream, encoding)
         let response = new PicoResponse(outstream, fun x -> httpContext.Response.StatusCode <- x)

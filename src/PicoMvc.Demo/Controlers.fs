@@ -1,8 +1,8 @@
-﻿namespace Controlers
+﻿namespace Controllers
 open Strangelights.PicoMvc
 
 
-[<Controler>]
+[<Controller>]
 module Helloworld =
     let get () =
         Result "world"
