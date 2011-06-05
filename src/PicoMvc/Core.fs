@@ -87,14 +87,16 @@ type RoutingTable private (handlersMap: Map<string * string, (string*Type)[] * (
             new RoutingTable(handlersMap')
         else failwith "not a function"
 
-type PicoRequest(urlPart: string, urlExtension: string: string, verb: string, parameters: Dictionary<string, string>, requestStream: StreamReader) =
+type PicoRequest(urlPart: string, urlExtension: string: string, verb: string, parameters: Dictionary<string, string>, rawStream: Stream, requestStream: StreamReader) =
     member x.UrlPart = urlPart
     member x.UrlExtension = urlExtension
     member x.Verb = verb
     member x.Parameters = parameters
+    member x.RawStream = rawStream
     member x.RequestStream = requestStream
 
-type PicoResponse(responceStream: StreamWriter, setStatusCode: int -> unit) =
+type PicoResponse(rawStream: Stream, responceStream: StreamWriter, setStatusCode: int -> unit) =
+    member x.RawStream = rawStream
     member x.ResponceStream = responceStream
     member x.SetStatusCode code = setStatusCode code
 

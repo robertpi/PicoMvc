@@ -20,9 +20,9 @@ module AspNet =
                 let urlPart = Path.Combine(dir, file)
                 let urlExtension = Path.GetExtension fullUrl
                 urlPart, urlExtension
-        let request = new PicoRequest(urlPart, urlExtension, httpContext.Request.HttpMethod, dict, new StreamReader(httpContext.Request.InputStream, httpContext.Request.ContentEncoding))
+        let request = new PicoRequest(urlPart, urlExtension, httpContext.Request.HttpMethod, dict, httpContext.Request.InputStream, new StreamReader(httpContext.Request.InputStream, httpContext.Request.ContentEncoding))
         use outstream = new StreamWriter(httpContext.Response.OutputStream, encoding)
-        let response = new PicoResponse(outstream, fun x -> httpContext.Response.StatusCode <- x)
+        let response = new PicoResponse(httpContext.Response.OutputStream, outstream, fun x -> httpContext.Response.StatusCode <- x)
         let context = new PicoContext(request, response)
         ControllerMapper.handleRequest routingTables context actions
 
