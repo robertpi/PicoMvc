@@ -23,6 +23,9 @@ module AspNet =
         let request = new PicoRequest(urlPart, urlExtension, httpContext.Request.HttpMethod, dict, httpContext.Request.InputStream, new StreamReader(httpContext.Request.InputStream, httpContext.Request.ContentEncoding))
         use outstream = new StreamWriter(httpContext.Response.OutputStream, encoding)
         let response = new PicoResponse(httpContext.Response.OutputStream, outstream, fun x -> httpContext.Response.StatusCode <- x)
+        httpContext.Response.ContentEncoding <- encoding
+        // TODO hack, would be better to give developer the control of this
+        httpContext.Response.ContentType <- sprintf "%s; charset=%s" httpContext.Response.ContentType encoding.WebName 
         let context = new PicoContext(request, response)
         ControllerMapper.handleRequest routingTables context actions
 

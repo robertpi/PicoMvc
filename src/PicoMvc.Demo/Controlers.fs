@@ -5,7 +5,7 @@ open Strangelights.PicoMvc
 [<Controller>]
 module Helloworld =
     let get () =
-        Result "world"
+        Result "wôrld"
 
 [<DynamicController>]
 module Toto =
