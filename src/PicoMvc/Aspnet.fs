@@ -31,7 +31,7 @@ module AspNet =
 type PicoMvcRouteHandler(urlName: string, routingTables: RoutingTable, actions, ?encoding: Encoding) =
     static let logger = LogManager.getLogger()
 
-    let encoding = match encoding with None -> System.Text.Encoding.UTF8 | Some x -> x
+    let encoding = match encoding with None -> new System.Text.UTF8Encoding(false) :> Encoding | Some x -> x
 
     // implement the interface that's used to route request
     interface IRouteHandler with
