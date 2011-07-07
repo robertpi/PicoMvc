@@ -16,10 +16,12 @@ module AspNet =
             if String.IsNullOrEmpty fullUrl || fullUrl = "/" then
                 "/", ""
             else 
-                let dir, file = Path.GetDirectoryName fullUrl, Path.GetFileNameWithoutExtension fullUrl
-                let urlPart = Path.Combine(dir, file)
-                let urlExtension = Path.GetExtension fullUrl
-                urlPart, urlExtension
+                let dotIndex = urlName.LastIndexOf(".")
+                if dotIndex > 0 then
+                    urlName.[ .. dotIndex - 1 ], urlName.[ dotIndex .. ]
+                elif urlName.EndsWith("/") then
+                    urlName.[ .. urlName.Length - 2], ""
+                else urlName, ""
         let request = new PicoRequest(urlPart, urlExtension, httpContext.Request.HttpMethod, dict, httpContext.Request.InputStream, new StreamReader(httpContext.Request.InputStream, httpContext.Request.ContentEncoding))
         use outstream = new StreamWriter(httpContext.Response.OutputStream, encoding)
         let response = new PicoResponse(httpContext.Response.OutputStream, outstream, fun x -> httpContext.Response.StatusCode <- x)
