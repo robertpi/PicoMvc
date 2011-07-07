@@ -16,12 +16,12 @@ module AspNet =
             if String.IsNullOrEmpty fullUrl || fullUrl = "/" then
                 "/", ""
             else 
-                let dotIndex = urlName.LastIndexOf(".")
+                let dotIndex = fullUrl.LastIndexOf(".")
                 if dotIndex > 0 then
-                    urlName.[ .. dotIndex - 1 ], urlName.[ dotIndex .. ]
-                elif urlName.EndsWith("/") then
-                    urlName.[ .. urlName.Length - 2], ""
-                else urlName, ""
+                    fullUrl.[ .. dotIndex - 1 ], fullUrl.[ dotIndex .. ]
+                elif fullUrl.EndsWith("/") then
+                    fullUrl.[ .. fullUrl.Length - 2], ""
+                else fullUrl, ""
         let request = new PicoRequest(urlPart, urlExtension, httpContext.Request.HttpMethod, dict, httpContext.Request.InputStream, new StreamReader(httpContext.Request.InputStream, httpContext.Request.ContentEncoding))
         use outstream = new StreamWriter(httpContext.Response.OutputStream, encoding)
         let response = new PicoResponse(httpContext.Response.OutputStream, outstream, fun x -> httpContext.Response.StatusCode <- x)
