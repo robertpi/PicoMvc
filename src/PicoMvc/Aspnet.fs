@@ -23,8 +23,8 @@ module AspNet =
         let parameters = httpContext.Request.Params.AllKeys |> Seq.fold (fun acc x -> Map.add x httpContext.Request.Params.[x] acc) Map.empty
         let headers = httpContext.Request.Headers.AllKeys |> Seq.fold (fun acc x -> Map.add x httpContext.Request.Headers.[x] acc) Map.empty
         let makeCookie (cookie: HttpCookie) =
-            { Domain = cookie.Domain
-              Expires = cookie.Expires
+            { Domain = if cookie.Domain = null then None else Some cookie.Domain
+              Expires = if cookie.Expires = DateTime.MinValue then None else Some cookie.Expires
               HttpOnly = cookie.HttpOnly
               Name = cookie.Name
               Path = cookie.Path
@@ -37,11 +37,13 @@ module AspNet =
         let setStatus x = httpContext.Response.StatusCode <- x
         let writeCookie cookie =
             let httpCookie = new HttpCookie(cookie.Name, 
-                                            Domain = cookie.Domain, 
-                                            Expires = cookie.Expires, 
                                             HttpOnly = cookie.HttpOnly, 
                                             Path = cookie.Path,
                                             Secure = cookie.Secure)
+            match cookie.Domain with
+            | Some x -> httpCookie.Domain <- x | None -> ()
+            match cookie.Expires with
+            | Some x -> httpCookie.Expires <- x | None -> ()
             match cookie.Value with
             | Some x -> httpCookie.Value <- x | None -> ()
             for x in cookie.Values do httpCookie.Values.Add(x.Key, x.Value)
