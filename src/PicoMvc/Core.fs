@@ -26,18 +26,41 @@ type ErrorMessage =
     { Code: int
       Error: string }
 
-type PicoRequest(urlPart: string, urlExtension: string: string, verb: string, parameters: Dictionary<string, string>, rawStream: Stream, requestStream: StreamReader) =
+type Cookie =
+    { Domain: string
+      Expires: DateTime
+      HttpOnly: bool
+      Name: string
+      Path: string
+      Secure: bool
+      Value: option<string>
+      Values: Map<string,string> }
+
+type PicoRequest(urlPart: string, 
+                 urlExtension: string: string, 
+                 verb: string, 
+                 parameters: Map<string, string>, 
+                 headers: Map<string, string>, 
+                 cookies: Map<string, Cookie>, 
+                 rawStream: Stream, 
+                 requestStream: StreamReader) =
     member x.UrlPart = urlPart
     member x.UrlExtension = urlExtension
     member x.Verb = verb
     member x.Parameters = parameters
+    member x.Headers = headers
+    member x.Cookies = cookies
     member x.RawStream = rawStream
     member x.RequestStream = requestStream
 
-type PicoResponse(rawStream: Stream, responceStream: StreamWriter, setStatusCode: int -> unit) =
+type PicoResponse(rawStream: Stream, 
+                  responceStream: StreamWriter, 
+                  setStatusCode: int -> unit, 
+                  writeCookie: Cookie -> unit) =
     member x.RawStream = rawStream
     member x.ResponceStream = responceStream
     member x.SetStatusCode code = setStatusCode code
+    member x.WriteCookie cookie = writeCookie cookie
 
 type PicoContext(request: PicoRequest, response: PicoResponse) =
     member x.Request = request

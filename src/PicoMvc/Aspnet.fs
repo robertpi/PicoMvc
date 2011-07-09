@@ -9,8 +9,6 @@ open Strangelights.Log4f
 
 module AspNet =
     let processRequest (urlName: string) (routingTables: RoutingTable) (encoding: Encoding) (requestContext: RequestContext) (httpContext:HttpContext) actions =
-        let dict = new Dictionary<string, string>()
-        for x in httpContext.Request.Params.AllKeys do dict.Add(x, httpContext.Request.Params.[x])
         let fullUrl = string requestContext.RouteData.Values.[urlName]
         let urlPart, urlExtension  = 
             if String.IsNullOrEmpty fullUrl || fullUrl = "/" then
@@ -22,9 +20,33 @@ module AspNet =
                 elif fullUrl.EndsWith("/") then
                     fullUrl.[ .. fullUrl.Length - 2], ""
                 else fullUrl, ""
-        let request = new PicoRequest(urlPart, urlExtension, httpContext.Request.HttpMethod, dict, httpContext.Request.InputStream, new StreamReader(httpContext.Request.InputStream, httpContext.Request.ContentEncoding))
+        let parameters = httpContext.Request.Params.AllKeys |> Seq.fold (fun acc x -> Map.add x httpContext.Request.Params.[x] acc) Map.empty
+        let headers = httpContext.Request.Headers.AllKeys |> Seq.fold (fun acc x -> Map.add x httpContext.Request.Headers.[x] acc) Map.empty
+        let makeCookie (cookie: HttpCookie) =
+            { Domain = cookie.Domain
+              Expires = cookie.Expires
+              HttpOnly = cookie.HttpOnly
+              Name = cookie.Name
+              Path = cookie.Path
+              Secure = cookie.Secure
+              Value = if String.IsNullOrEmpty(cookie.Value) then None else Some cookie.Value
+              Values = cookie.Values.AllKeys |> Seq.fold (fun acc x -> Map.add x cookie.Values.[x] acc) Map.empty  }
+        let cookies = httpContext.Request.Cookies.AllKeys |> Seq.fold (fun acc x -> Map.add x (makeCookie httpContext.Request.Cookies.[x]) acc) Map.empty
+        let request = new PicoRequest(urlPart, urlExtension, httpContext.Request.HttpMethod, parameters, headers, cookies, httpContext.Request.InputStream, new StreamReader(httpContext.Request.InputStream, httpContext.Request.ContentEncoding))
         use outstream = new StreamWriter(httpContext.Response.OutputStream, encoding)
-        let response = new PicoResponse(httpContext.Response.OutputStream, outstream, fun x -> httpContext.Response.StatusCode <- x)
+        let writeCookie cookie =
+            let httpCookie = new HttpCookie(cookie.Name, 
+                                            Domain = cookie.Domain, 
+                                            Expires = cookie.Expires, 
+                                            HttpOnly = cookie.HttpOnly, 
+                                            Path = cookie.Path,
+                                            Secure = cookie.Secure)
+            match cookie.Value with
+            | Some x -> httpCookie.Value <- x | None -> ()
+            for x in cookie.Values do httpCookie.Values.Add(x.Key, x.Value)
+            httpContext.Response.Cookies.Add(httpCookie)
+        let setStatus x = httpContext.Response.StatusCode <- x
+        let response = new PicoResponse(httpContext.Response.OutputStream, outstream, setStatus, writeCookie)
         httpContext.Response.ContentEncoding <- encoding
         // TODO hack, would be better to give developer the control of this
         httpContext.Response.ContentType <- sprintf "%s; charset=%s" httpContext.Response.ContentType encoding.WebName 
