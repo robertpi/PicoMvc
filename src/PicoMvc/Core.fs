@@ -223,6 +223,18 @@ module ControllerMapper =
         { CanTreatParameter = canTreat
           ParameterAction = action }
 
+    let contextParameterAction  =
+        let canTreat (context: PicoContext) _ t =
+            t = typeof<PicoContext> || t = typeof<PicoResponse> || t = typeof<PicoRequest>
+        let action (context: PicoContext) _ t =
+            match t with
+            | x when x = typeof<PicoContext> -> context :> obj
+            | x when x = typeof<PicoRequest> -> context.Request :> obj
+            | x when x = typeof<PicoResponse> -> context.Request :> obj
+            | _ -> null
+        { CanTreatParameter = canTreat
+          ParameterAction = action }
+
 
     let handleRequest (routingTables: RoutingTable) (context: PicoContext) (ioActions: IOActions) =
         let path = context.Request.UrlPart
