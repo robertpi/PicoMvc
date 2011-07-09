@@ -34,6 +34,7 @@ module AspNet =
         let cookies = httpContext.Request.Cookies.AllKeys |> Seq.fold (fun acc x -> Map.add x (makeCookie httpContext.Request.Cookies.[x]) acc) Map.empty
         let request = new PicoRequest(urlPart, urlExtension, httpContext.Request.HttpMethod, parameters, headers, cookies, httpContext.Request.InputStream, new StreamReader(httpContext.Request.InputStream, httpContext.Request.ContentEncoding))
         use outstream = new StreamWriter(httpContext.Response.OutputStream, encoding)
+        let setStatus x = httpContext.Response.StatusCode <- x
         let writeCookie cookie =
             let httpCookie = new HttpCookie(cookie.Name, 
                                             Domain = cookie.Domain, 
@@ -45,8 +46,8 @@ module AspNet =
             | Some x -> httpCookie.Value <- x | None -> ()
             for x in cookie.Values do httpCookie.Values.Add(x.Key, x.Value)
             httpContext.Response.Cookies.Add(httpCookie)
-        let setStatus x = httpContext.Response.StatusCode <- x
-        let response = new PicoResponse(httpContext.Response.OutputStream, outstream, setStatus, writeCookie)
+        let redirect url = httpContext.Response.Redirect url
+        let response = new PicoResponse(httpContext.Response.OutputStream, outstream, setStatus, writeCookie, redirect)
         httpContext.Response.ContentEncoding <- encoding
         // TODO hack, would be better to give developer the control of this
         httpContext.Response.ContentType <- sprintf "%s; charset=%s" httpContext.Response.ContentType encoding.WebName 

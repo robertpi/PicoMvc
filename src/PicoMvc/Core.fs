@@ -19,22 +19,55 @@ type DynamicControllerAttribute() =
 
 type ControllerResult =
     | Result of obj
-    | NoResult
+    | Redirect of string
     | Error of int * string
+    | NoResult
 
 type ErrorMessage =
     { Code: int
       Error: string }
 
 type Cookie =
-    { Domain: string
-      Expires: DateTime
+    { Domain: option<string>
+      Expires: option<DateTime>
       HttpOnly: bool
       Name: string
       Path: string
       Secure: bool
       Value: option<string>
       Values: Map<string,string> }
+    with
+        member x.AddOrAlterValue key value =
+            { x with Values = Map.add key value x.Values }
+        member x.RemoveValue key =
+            { x with Values = Map.remove key x.Values }
+        static member Make name = 
+            { Domain = None
+              Expires = None
+              HttpOnly = false
+              Name = name
+              Path = "/"
+              Secure = false
+              Value = None
+              Values = Map.empty }
+        static member Make(name, value) = 
+            { Domain = None
+              Expires = None
+              HttpOnly = false
+              Name = name
+              Path = "/"
+              Secure = false
+              Value = value
+              Values = Map.empty }
+        static member Make (name, key, value) = 
+            { Domain = None
+              Expires = None
+              HttpOnly = false
+              Name = name
+              Path = "/"
+              Secure = false
+              Value = None
+              Values = Map.add key value Map.empty }
 
 type PicoRequest(urlPart: string, 
                  urlExtension: string: string, 
@@ -56,11 +89,13 @@ type PicoRequest(urlPart: string,
 type PicoResponse(rawStream: Stream, 
                   responceStream: StreamWriter, 
                   setStatusCode: int -> unit, 
-                  writeCookie: Cookie -> unit) =
+                  writeCookie: Cookie -> unit,
+                  redirect: string -> unit) =
     member x.RawStream = rawStream
     member x.ResponceStream = responceStream
     member x.SetStatusCode code = setStatusCode code
     member x.WriteCookie cookie = writeCookie cookie
+    member x.Redirect url = redirect url
 
 type PicoContext(request: PicoRequest, response: PicoResponse) =
     member x.Request = request
@@ -227,6 +262,7 @@ module ControllerMapper =
                 | None -> ()
             match res with
             | Result obj -> treatResult obj
+            | Redirect url -> treatResult url
             | Error(code, message)  -> 
                 context.Response.SetStatusCode code
                 let res = { Code = code; Error = message } :> obj
