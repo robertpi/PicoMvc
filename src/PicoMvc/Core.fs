@@ -274,7 +274,7 @@ module ControllerMapper =
                 | None -> ()
             match res with
             | Result obj -> treatResult obj
-            | Redirect url -> treatResult url
+            | Redirect url -> context.Response.Redirect url
             | Error(code, message)  -> 
                 context.Response.SetStatusCode code
                 let res = { Code = code; Error = message } :> obj
