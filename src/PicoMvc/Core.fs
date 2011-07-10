@@ -34,7 +34,7 @@ type Cookie =
       Name: string
       Path: string
       Secure: bool
-      Value: option<string>
+      //Value: option<string>
       Values: Map<string,string> }
     with
         member x.AddOrAlterValue key value =
@@ -48,16 +48,7 @@ type Cookie =
               Name = name
               Path = "/"
               Secure = false
-              Value = None
-              Values = Map.empty }
-        static member Make(name, value) = 
-            { Domain = None
-              Expires = None
-              HttpOnly = false
-              Name = name
-              Path = "/"
-              Secure = false
-              Value = value
+              //Value = None
               Values = Map.empty }
         static member Make (name, key, value) = 
             { Domain = None
@@ -66,7 +57,7 @@ type Cookie =
               Name = name
               Path = "/"
               Secure = false
-              Value = None
+              //Value = None
               Values = Map.add key value Map.empty }
 
 type PicoRequest(urlPart: string, 

@@ -29,24 +29,32 @@ module AspNet =
               Name = cookie.Name
               Path = cookie.Path
               Secure = cookie.Secure
-              Value = if String.IsNullOrEmpty(cookie.Value) then None else Some cookie.Value
               Values = cookie.Values.AllKeys |> Seq.fold (fun acc x -> Map.add x cookie.Values.[x] acc) Map.empty  }
         let cookies = httpContext.Request.Cookies.AllKeys |> Seq.fold (fun acc x -> Map.add x (makeCookie httpContext.Request.Cookies.[x]) acc) Map.empty
         let request = new PicoRequest(urlPart, urlExtension, httpContext.Request.HttpMethod, parameters, headers, cookies, httpContext.Request.InputStream, new StreamReader(httpContext.Request.InputStream, httpContext.Request.ContentEncoding))
         use outstream = new StreamWriter(httpContext.Response.OutputStream, encoding)
         let setStatus x = httpContext.Response.StatusCode <- x
         let writeCookie cookie =
-            let httpCookie = new HttpCookie(cookie.Name, 
-                                            HttpOnly = cookie.HttpOnly, 
-                                            Path = cookie.Path,
-                                            Secure = cookie.Secure)
+            let httpCookie = 
+//                if httpContext.Request.Cookies.AllKeys |> Seq.exists (fun name -> name = cookie.Name) then
+//                    let c = httpContext.Request.Cookies.[cookie.Name]
+//                    c.HttpOnly <- cookie.HttpOnly
+//                    c.Path <- cookie.Path
+//                    c.Secure <- cookie.Secure
+//                    c
+//                else
+                    new HttpCookie(cookie.Name, 
+                                   HttpOnly = cookie.HttpOnly, 
+                                   Path = cookie.Path,
+                                   Secure = cookie.Secure)
+                    
             match cookie.Domain with
             | Some x -> httpCookie.Domain <- x | None -> ()
             match cookie.Expires with
             | Some x -> httpCookie.Expires <- x | None -> ()
-            match cookie.Value with
-            | Some x -> httpCookie.Value <- x | None -> ()
-            for x in cookie.Values do httpCookie.Values.Add(x.Key, x.Value)
+//            match cookie.Value with
+//            | Some x -> httpCookie.Value <- x | None -> ()
+            for x in cookie.Values do httpCookie.Values.[x.Key] <- x.Value
             httpContext.Response.Cookies.Add(httpCookie)
         let redirect url = httpContext.Response.Redirect url
         let response = new PicoResponse(httpContext.Response.OutputStream, outstream, setStatus, writeCookie, redirect)
