@@ -4,7 +4,10 @@ open Strangelights.PicoMvc
 
 [<Controller>]
 module Helloworld =
-    let get () =
+    let get (context: PicoContext) =
+        // TODO get headers working
+        //let headers = context.Response.DefaultHeaders.Add("Pragma", "whatever")
+        //context.Response.OverrideDefaultHeaders headers
         Result "wôrld"
 
 [<DynamicController>]

@@ -78,19 +78,26 @@ type PicoRequest(urlPart: string,
     member x.RequestStream = requestStream
 
 type PicoResponse(rawStream: Stream, 
-                  responceStream: StreamWriter, 
+                  responceStream: StreamWriter,
+                  // TODO get headers working
+//                  defaultHeaders: Map<string, string>,
+//                  overrideDefaultHeaders: Map<string, string> -> unit,
                   setStatusCode: int -> unit, 
                   writeCookie: Cookie -> unit,
                   redirect: string -> unit) =
     member x.RawStream = rawStream
     member x.ResponceStream = responceStream
+                  // TODO get headers working
+//    member x.DefaultHeaders = defaultHeaders
+//    member x.OverrideDefaultHeaders headers = overrideDefaultHeaders headers
     member x.SetStatusCode code = setStatusCode code
     member x.WriteCookie cookie = writeCookie cookie
     member x.Redirect url = redirect url
 
-type PicoContext(request: PicoRequest, response: PicoResponse) =
+type PicoContext(request: PicoRequest, response: PicoResponse, mapPath: string -> string) =
     member x.Request = request
     member x.Response = response
+    member x.MapPath path = mapPath path
 
 
 type RoutingTable private (staticHandlersMap: Map<string * string, (string*Type)[] * (obj[] -> obj)>, dynamicHandlers) =

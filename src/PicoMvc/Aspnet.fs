@@ -12,7 +12,7 @@ module AspNet =
         let fullUrl = string requestContext.RouteData.Values.[urlName]
         let urlPart, urlExtension  = 
             if String.IsNullOrEmpty fullUrl || fullUrl = "/" then
-                "/", ""
+                "", ""
             else 
                 let dotIndex = fullUrl.LastIndexOf(".")
                 if dotIndex > 0 then
@@ -36,32 +36,29 @@ module AspNet =
         let setStatus x = httpContext.Response.StatusCode <- x
         let writeCookie cookie =
             let httpCookie = 
-//                if httpContext.Request.Cookies.AllKeys |> Seq.exists (fun name -> name = cookie.Name) then
-//                    let c = httpContext.Request.Cookies.[cookie.Name]
-//                    c.HttpOnly <- cookie.HttpOnly
-//                    c.Path <- cookie.Path
-//                    c.Secure <- cookie.Secure
-//                    c
-//                else
-                    new HttpCookie(cookie.Name, 
-                                   HttpOnly = cookie.HttpOnly, 
-                                   Path = cookie.Path,
-                                   Secure = cookie.Secure)
+                new HttpCookie(cookie.Name, 
+                                HttpOnly = cookie.HttpOnly, 
+                                Path = cookie.Path,
+                                Secure = cookie.Secure)
                     
             match cookie.Domain with
             | Some x -> httpCookie.Domain <- x | None -> ()
             match cookie.Expires with
             | Some x -> httpCookie.Expires <- x | None -> ()
-//            match cookie.Value with
-//            | Some x -> httpCookie.Value <- x | None -> ()
             for x in cookie.Values do httpCookie.Values.[x.Key] <- x.Value
             httpContext.Response.Cookies.Add(httpCookie)
         let redirect url = httpContext.Response.Redirect url
-        let response = new PicoResponse(httpContext.Response.OutputStream, outstream, setStatus, writeCookie, redirect)
+        // TODO get headers working
+//        let defaultHeaders = httpContext.Response.Headers.AllKeys |> Seq.fold (fun acc x -> Map.add x httpContext.Response.Headers.[x] acc) Map.empty
+//        let writeHeaders headers =
+//            if defaultHeaders <> headers then
+//                httpContext.Response.Headers.Clear()
+//                for header in headers do httpContext.Response.Headers.Add(header.Key, header.Value)
+        let response = new PicoResponse(httpContext.Response.OutputStream, outstream, (* defaultHeaders, writeHeaders, *) setStatus, writeCookie, redirect)
         httpContext.Response.ContentEncoding <- encoding
         // TODO hack, would be better to give developer the control of this
         httpContext.Response.ContentType <- sprintf "%s; charset=%s" httpContext.Response.ContentType encoding.WebName 
-        let context = new PicoContext(request, response)
+        let context = new PicoContext(request, response, httpContext.Server.MapPath)
         ControllerMapper.handleRequest routingTables context actions
 
 
