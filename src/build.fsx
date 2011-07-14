@@ -29,9 +29,10 @@ Target "CreateNuGet" (fun _ ->
             Project = "PicoMvc"
             Description = "A thin veneer of F#ness arround several different frameworks to make a light weight Mvc framework."
             Version = getBuildParam "version"
+            ToolPath = @"..\tools\Nuget.exe"
             OutputPath = nugetDir
             AccessKey = getBuildParamOrDefault "nugetkey" ""
-            Publish = hasBuildParam "nugetkey" }) @"..\nugetpackage\PicoMvc.nuspec"
+            Publish = hasBuildParam "nugetkey" }) @"PicoMvc.nuspec"
 )
 
 "Clean"
