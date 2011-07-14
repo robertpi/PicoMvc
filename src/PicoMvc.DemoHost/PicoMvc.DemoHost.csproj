@@ -80,10 +80,6 @@
     <Folder Include="App_Data\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\PicoMvc.PhpViews\PicoMvc.PhpViews.phpproj">
-      <Project>{276D0DC2-0497-42FE-B88B-179E6A1CDD48}</Project>
-      <Name>PhpViews</Name>
-    </ProjectReference>
     <ProjectReference Include="..\PicoMvc.Demo\PicoMvc.Demo.fsproj">
       <Project>{F1C4E818-748A-4DCC-B597-104DF83C06A3}</Project>
       <Name>PicoMvc.Demo</Name>

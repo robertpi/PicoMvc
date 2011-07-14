@@ -7,8 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PicoMvc.DemoHost", "PicoMvc
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PicoMvc.Demo", "PicoMvc.Demo\PicoMvc.Demo.fsproj", "{F1C4E818-748A-4DCC-B597-104DF83C06A3}"
 EndProject
-Project("{7FB7D0AD-ABC6-4BF8-BB4D-B2C68B00F984}") = "PicoMvc.PhpViews", "PicoMvc.PhpViews\PicoMvc.PhpViews.phpproj", "{276D0DC2-0497-42FE-B88B-179E6A1CDD48}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,10 +25,6 @@ Global
 		{F1C4E818-748A-4DCC-B597-104DF83C06A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F1C4E818-748A-4DCC-B597-104DF83C06A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F1C4E818-748A-4DCC-B597-104DF83C06A3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{276D0DC2-0497-42FE-B88B-179E6A1CDD48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{276D0DC2-0497-42FE-B88B-179E6A1CDD48}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{276D0DC2-0497-42FE-B88B-179E6A1CDD48}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{276D0DC2-0497-42FE-B88B-179E6A1CDD48}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
