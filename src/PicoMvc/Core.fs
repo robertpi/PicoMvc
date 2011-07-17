@@ -107,7 +107,11 @@ type RoutingTable private (staticHandlersMap: Map<string * string, (string*Type)
     let getDynamicFunction func =
         let t = func.GetType()
         if FSharpType.IsFunction t then
-            let invokeMethod = t.GetMethod("Invoke")
+            let invokeMethod = 
+                t.GetMethods()
+                |> Seq.filter (fun x -> x.Name = "Invoke")
+                |> Seq.sortBy (fun x -> x.GetParameters().Length)
+                |> Seq.toList |> List.rev |> List.head
             let parameters = invokeMethod.GetParameters() |> Seq.map (fun x -> x.Name, x.ParameterType) |> Seq.toArray
             let invoke = fun parameters -> invokeMethod.Invoke(func, parameters)
             parameters, invoke
