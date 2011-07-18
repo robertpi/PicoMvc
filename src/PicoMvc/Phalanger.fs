@@ -21,7 +21,7 @@ let defaultPhalangerResultAction =
             |> Seq.exists(fun x -> x.FullName.StartsWith(scriptName))
         context.Request.UrlExtension = ".html" && scriptExists()
 
-    let phalanagerView (context: PicoContext) (model: obj) =
+    let phalanagerView (context: PicoContext) (model: RenderingData) =
         use request_context = RequestContext.Initialize(ApplicationContext.Default, HttpContext.Current)
         use byteOut = HttpContext.Current.Response.OutputStream
 
@@ -33,26 +33,14 @@ let defaultPhalangerResultAction =
         phpContext.Output <- uftOut
         phpContext.OutputStream <- byteOut // byte stream output
 
-        // declare some global variables:
-        Operators.SetVariable(phpContext, null, "model", model)
+            // declare some global variables:
+        match model.Model with
+        | Some x ->
+            Operators.SetVariable(phpContext, null, "model", x)
+        | None -> ()
 
         phpContext.Include(sprintf "%s.php" context.Request.UrlPart, false) |> ignore
 
-        //let viewPath = getViewPath context
-        // evaluate our code:
-//        DynamicCode.Eval(
-//            File.ReadAllText viewPath,   // the code to evaluate
-//            false,  // explicit evaluation (phalanger internal stuff)
-//            phpContext,// current execution script context
-//            null,   // local variables (when the code is being evaluated from within the function context)
-//            null,   // reference to "$this" (when the code is being evaluated from within the instance method)
-//            null,   // current class context (when the code is being evaluated from within a method, class context is used to determine visibility of other fields and methods)
-//            viewPath, // file name of the script containing the evaluated code (used for error reporting and debug information, you can notice the debugger will step into this file, when you hit F11)
-//            1,      // line position of the code in the script file, used for error reporting and debugging information
-//            1,      // column ...
-//            -1,     // i actually dont know
-//            null    // current namespace, used when CLR mode is enabled (e.g. WinForms etc.)
-//            ) |> ignore
 
     { CanTreatResult = canTreat
       ResultAction = phalanagerView }

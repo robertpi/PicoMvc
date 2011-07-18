@@ -5,9 +5,14 @@ open Strangelights.PicoMvc
 
 let defaultJsonResultAction =
     let canTreat _ _ = true
-    let serializeAsJson (context: PicoContext) (model: obj) =
+    let serializeAsJson (context: PicoContext) (model: RenderingData) =
         let serializer = JsonSerializer.Create(new JsonSerializerSettings())
-        serializer.Serialize(context.Response.ResponceStream, model)
+        match model.Model with
+        | Some x -> serializer.Serialize(context.Response.ResponceStream, x)
+        | None -> ()
+        match model.Error with
+        | Some x -> serializer.Serialize(context.Response.ResponceStream, x)
+        | None -> ()
     { CanTreatResult = canTreat
       ResultAction = serializeAsJson }
 

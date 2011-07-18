@@ -8,7 +8,6 @@ open System.Web.SessionState
 open System.Reflection
 open Microsoft.FSharp.Reflection
 open Strangelights.Log4f
-type Dictionary<'a, 'b> = System.Collections.Generic.Dictionary<'a, 'b>
 
 type ControllerAttribute() =
     inherit Attribute()
@@ -16,16 +15,28 @@ type ControllerAttribute() =
 type DynamicControllerAttribute() =
     inherit Attribute()
 
-
-type ControllerResult =
-    | Result of obj
-    | Redirect of string
-    | Error of int * string
-    | NoResult
-
 type ErrorMessage =
     { Code: int
       Error: string }
+
+type RenderingData =
+    { Model: option<obj>
+      Error: option<ErrorMessage>
+      Exception: option<Exception>
+      ValidationMessages: Map<string,string> }
+    with
+        static member Default =
+            { Model = None
+              Error = None
+              Exception = None
+              ValidationMessages = Map.empty }
+
+type ControllerResult =
+    | Result of obj
+    | ResultAndValidationMessages of obj * Map<string,string>
+    | Redirect of string
+    | Error of int * string
+    | NoResult
 
 type Cookie =
     { Domain: option<string>
@@ -34,7 +45,6 @@ type Cookie =
       Name: string
       Path: string
       Secure: bool
-      //Value: option<string>
       Values: Map<string,string> }
     with
         member x.AddOrAlterValue key value =
@@ -117,13 +127,13 @@ type RoutingTable private (staticHandlersMap: Map<string * string, (string*Type)
             parameters, invoke
         else failwith "not a function"
 
-    member x.GetHandlerFunction (verb: string) url =
-        let key = verb.ToLowerInvariant(), url
+    member x.GetHandlerFunction (request: PicoRequest) =
+        let key = request.Verb.ToLowerInvariant(), request.UrlPart
         if staticHandlersMap.ContainsKey key then
             let handler = staticHandlersMap.[key]
             Some handler
         else
-            List.tryFind (fun (accpetFunc, _) -> accpetFunc verb url) dynamicHandlers
+            List.tryFind (fun (accpetFunc, _) -> accpetFunc request) dynamicHandlers
             |> Option.map snd
 
     static member LoadFromAssemblies(assems: Assembly[]) =
@@ -176,7 +186,7 @@ type RoutingTable private (staticHandlersMap: Map<string * string, (string*Type)
                 failwithf "didn't find 'accept' and 'handle' in module %s" typ.Name
             // TODO map rough generic parameters to string ?
             let parameters = func.GetParameters() |> Array.map (fun p -> p.Name, p.ParameterType)
-            let acceptFunc = fun (verb: string) (url: string) -> acceptFunc.Invoke(null, [| verb :> obj; url :> obj|]) :?> bool
+            let acceptFunc = fun (request:PicoRequest) -> acceptFunc.Invoke(null, [| request :> obj |]) :?> bool
             let func = parameters, fun parameters -> func.Invoke(null, parameters)
             acceptFunc, func
 
@@ -193,7 +203,7 @@ type RoutingTable private (staticHandlersMap: Map<string * string, (string*Type)
         let handlersMap' = staticHandlersMap.Add((verb, url), dynamicFunc)
         new RoutingTable(handlersMap', dynamicHandlers)
 
-    member x.AddDynamicHandler(acceptFunc: string -> string -> bool, func) =
+    member x.AddDynamicHandler(acceptFunc: PicoRequest -> bool, func) =
         let dynamicFunc = getDynamicFunction func
         let handlersMap' = (acceptFunc, dynamicFunc) :: dynamicHandlers
         new RoutingTable(staticHandlersMap, handlersMap')
@@ -203,16 +213,14 @@ type ParameterAction =
       ParameterAction: PicoContext -> string -> Type -> obj }
 
 type ResultAction =
-    { CanTreatResult: PicoContext -> obj -> bool
-      ResultAction: PicoContext -> obj -> unit }
+    { CanTreatResult: PicoContext -> RenderingData -> bool
+      ResultAction: PicoContext -> RenderingData -> unit }
 
 type IOActions =
     { TreatParameterAction: List<ParameterAction>
       TreatResultAction: List<ResultAction> }
 
-module ControllerMapper =
-    let logger = LogManager.getLogger()
-
+module ParamaterActions =
     let defaultParameterAction  =
         let canTreat (context: PicoContext) name _ =
             context.Request.Parameters.ContainsKey name
@@ -237,13 +245,19 @@ module ControllerMapper =
         { CanTreatParameter = canTreat
           ParameterAction = action }
 
+module ControllerMapper =
+    type TempResult =
+        | Res of ControllerResult
+        | Exc of Exception
+
+    let logger = LogManager.getLogger()
 
     let handleRequest (routingTables: RoutingTable) (context: PicoContext) (ioActions: IOActions) =
         let path = context.Request.UrlPart
 
         logger.Info "Processing %s request for %s" context.Request.Verb path
 
-        let handler = routingTables.GetHandlerFunction context.Request.Verb path
+        let handler = routingTables.GetHandlerFunction context.Request
         let parameterOfType (name:string, t:Type) = 
             let res =
                 ioActions.TreatParameterAction 
@@ -259,14 +273,15 @@ module ControllerMapper =
                 |> Array.map parameterOfType
             let paramPair = Seq.zip parametersTypes parameters |> Seq.map(fun ((name,_), v) -> sprintf "%s: %A" name v)
             logger.Info "Parameters for %s request for %s: %s" context.Request.Verb path (String.Join(", ", paramPair))
+
             let res = 
                 try
                     let res = handler(parameters) :?> ControllerResult
                     logger.Info "Successfully handled %s request for %s" context.Request.Verb path
-                    res
+                    Res res
                 with ex -> 
                     logger.Error(ex, "Error handling %s request for %s, error was") context.Request.Verb path
-                    Error (500, (ex.ToString()))
+                    Exc ex
             let treatResult obj =
                 let res =
                     ioActions.TreatResultAction 
@@ -275,13 +290,18 @@ module ControllerMapper =
                 | Some pa -> pa.ResultAction context obj
                 | None -> ()
             match res with
-            | Result obj -> treatResult obj
-            | Redirect url -> context.Response.Redirect url
-            | Error(code, message)  -> 
+            | Res (Result model) -> treatResult { RenderingData.Default with Model = Some model }
+            | Res (ResultAndValidationMessages (model, messages)) -> 
+                treatResult { RenderingData.Default with Model = Some model; ValidationMessages = messages }
+            | Res (Redirect url) -> context.Response.Redirect url
+            | Res (Error(code, message)) -> 
                 context.Response.SetStatusCode code
-                let res = { Code = code; Error = message } :> obj
-                treatResult res
-            | NoResult -> ()
+                let error = { Code = code; Error = message }
+                treatResult { RenderingData.Default with Error = Some error }
+            | Res (NoResult) -> ()
+            | Exc (ex) -> 
+                context.Response.SetStatusCode 500
+                treatResult { RenderingData.Default with Exception = Some ex }
         | None ->
             logger.Warn "Did not find handler for %s request for %s" context.Request.Verb path
             // TODO raising an http exception doesn't really seem to work, why?

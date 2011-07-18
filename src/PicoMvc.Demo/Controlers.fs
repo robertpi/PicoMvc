@@ -12,7 +12,7 @@ module Helloworld =
 
 [<DynamicController>]
 module Toto =
-    let accept (verb: string) (url: string) =
-        url.StartsWith("toto")
+    let accept (request: PicoRequest) =
+        request.UrlPart.StartsWith("toto")
     let handle () =
         Result "toto"

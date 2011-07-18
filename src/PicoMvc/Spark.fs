@@ -11,13 +11,19 @@ let defaultSparkResultAction =
 
     let engine = new SparkViewEngine()
 
-    let serializeAsJson (context: PicoContext) (model: obj) =
+    let serializeAsJson (context: PicoContext) (model: RenderingData) =
         let desc = new SparkViewDescriptor()
         desc.AddTemplate(sprintf "%s.spark" context.Request.UrlPart) |> ignore
-        let modelType = model.GetType().FullName
-        desc.AddAccessor(sprintf "%s model" modelType, sprintf "(%s)Globals[\"model\"]" modelType) |> ignore
+        match model.Model with
+        | Some x ->
+            let modelType = x.GetType().FullName
+            desc.AddAccessor(sprintf "%s model" modelType, sprintf "(%s)Globals[\"model\"]" modelType) |> ignore
+        | None -> ()
         let view = engine.CreateInstance(desc) :?> SparkViewBase
-        view.Globals.Add("model", model)
+        match model.Model with
+        | Some x ->
+            view.Globals.Add("model", x)
+        | None -> ()
         view.RenderView(context.Response.ResponceStream)
 
     { CanTreatResult = canTreat

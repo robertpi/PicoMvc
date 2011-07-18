@@ -16,7 +16,7 @@ type Global() =
         let routingTables = RoutingTable.LoadFromCurrentAssemblies()
         let routingTables = routingTables.AddStaticHandler(("get","/"), (fun () -> Result "hello"))
         let actions =
-            { TreatParameterAction = [ ControllerMapper.defaultParameterAction; ControllerMapper.contextParameterAction; NewtonsoftJson.defaultJsonRecordParameterAction ]
+            { TreatParameterAction = [ ParamaterActions.defaultParameterAction; ParamaterActions.contextParameterAction; NewtonsoftJson.defaultJsonRecordParameterAction ]
               TreatResultAction = [ Spark.defaultSparkResultAction; Phalanger.defaultPhalangerResultAction; NewtonsoftJson.defaultJsonResultAction ] }
         routes.Add(new Route("{*url}", new PicoMvcRouteHandler("url", routingTables, actions)))
 
