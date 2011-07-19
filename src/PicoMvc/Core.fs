@@ -31,6 +31,12 @@ type RenderingData =
               Exception = None
               ValidationMessages = Map.empty }
 
+type File =
+    { ContentLength: int
+      ContentType: string
+      FileName: string
+      InputStream: Stream }
+
 type ControllerResult =
     | Result of obj
     | ResultAndValidationMessages of obj * Map<string,string>
@@ -75,7 +81,8 @@ type PicoRequest(urlPart: string,
                  verb: string, 
                  parameters: Map<string, string>, 
                  headers: Map<string, string>, 
-                 cookies: Map<string, Cookie>, 
+                 cookies: Map<string, Cookie>,
+                 files: Map<string, File>,
                  rawStream: Stream, 
                  requestStream: StreamReader) =
     member x.UrlPart = urlPart
@@ -84,6 +91,7 @@ type PicoRequest(urlPart: string,
     member x.Parameters = parameters
     member x.Headers = headers
     member x.Cookies = cookies
+    member x.Files = files
     member x.RawStream = rawStream
     member x.RequestStream = requestStream
 

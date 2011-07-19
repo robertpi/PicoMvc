@@ -10,6 +10,16 @@ open Strangelights.Log4f
 module AspNet =
     let processRequest (urlName: string) (routingTables: RoutingTable) (encoding: Encoding) (requestContext: RequestContext) (httpContext:HttpContext) actions =
         let fullUrl = string requestContext.RouteData.Values.[urlName]
+        let files = 
+            httpContext.Request.Files.AllKeys
+            |> Seq.map (fun x -> 
+                            x,
+                            { ContentLength = httpContext.Request.Files.[x].ContentLength; 
+                              ContentType = httpContext.Request.Files.[x].ContentType; 
+                              FileName = httpContext.Request.Files.[x].FileName; 
+                              InputStream = httpContext.Request.Files.[x].InputStream }) 
+            |> Map.ofSeq
+
         let urlPart, urlExtension  = 
             if String.IsNullOrEmpty fullUrl || fullUrl = "/" then
                 "", ""
@@ -31,7 +41,15 @@ module AspNet =
               Secure = cookie.Secure
               Values = cookie.Values.AllKeys |> Seq.fold (fun acc x -> Map.add x cookie.Values.[x] acc) Map.empty  }
         let cookies = httpContext.Request.Cookies.AllKeys |> Seq.fold (fun acc x -> Map.add x (makeCookie httpContext.Request.Cookies.[x]) acc) Map.empty
-        let request = new PicoRequest(urlPart, urlExtension, httpContext.Request.HttpMethod, parameters, headers, cookies, httpContext.Request.InputStream, new StreamReader(httpContext.Request.InputStream, httpContext.Request.ContentEncoding))
+        let request = new PicoRequest(urlPart, 
+                                      urlExtension, 
+                                      httpContext.Request.HttpMethod, 
+                                      parameters, 
+                                      headers, 
+                                      cookies,
+                                      files, 
+                                      httpContext.Request.InputStream, 
+                                      new StreamReader(httpContext.Request.InputStream, httpContext.Request.ContentEncoding))
         use outstream = new StreamWriter(httpContext.Response.OutputStream, encoding)
         let setStatus x = httpContext.Response.StatusCode <- x
         let writeCookie cookie =
