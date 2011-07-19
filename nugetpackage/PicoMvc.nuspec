@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>PicoMvc</id>
-    <version>0.5.6</version> 
+    <version>0.5.7</version> 
     <authors>Robert Pickering</authors>
     <owners>Robert Pickering</owners>
     <projectUrl>https://github.com/robertpi/PicoMvc</projectUrl>
