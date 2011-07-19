@@ -4,7 +4,8 @@ open Microsoft.FSharp.Reflection
 open Strangelights.PicoMvc
 
 let defaultJsonResultAction =
-    let canTreat _ _ = true
+    let canTreat (context: PicoContext) _  =
+        context.Request.UrlExtension = ".json"
     let serializeAsJson (context: PicoContext) (model: RenderingData) =
         let serializer = JsonSerializer.Create(new JsonSerializerSettings())
         match model.Model with
