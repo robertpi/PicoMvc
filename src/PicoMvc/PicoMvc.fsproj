@@ -70,6 +70,7 @@
   <ItemGroup>
     <Compile Include="Core.fs" />
     <Compile Include="Aspnet.fs" />
+    <Compile Include="FormEncoding.fs" />
     <Compile Include="NewtonsoftJson.fs" />
     <Compile Include="CastleWindsor.fs" />
     <Compile Include="Phalanger.fs" />
