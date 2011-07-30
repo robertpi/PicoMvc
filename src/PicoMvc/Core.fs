@@ -147,9 +147,16 @@ type RoutingTable private (staticHandlersMap: Map<string * string, (string*Type)
     static member LoadFromAssemblies(assems: Assembly[]) =
         do for assem in assems do logger.Info "Checking for Controllers: %s" assem.FullName
 
+        let getAssemblies (assem: Assembly) =
+            try 
+                assem.GetTypes()
+            with ex ->
+                logger.Warn(ex, "Failed to load types from assembly %s") assem.FullName
+                [||]
+
         let fsModules =
             assems 
-            |> Seq.collect (fun assem -> assem.GetTypes())
+            |> Seq.collect getAssemblies
             |> Seq.filter (fun typ -> FSharpType.IsModule typ)
             |> Seq.toList
         let rootHandlerModules = fsModules |> Seq.filter (fun typ -> typ.IsDefined(typeof<ControllerAttribute>, false))
@@ -165,7 +172,7 @@ type RoutingTable private (staticHandlersMap: Map<string * string, (string*Type)
         let urlOfName (typ: Type) =
             let name =
                 if typ.IsNested then
-                    typ.FullName.[typ.Namespace.Length .. ].Replace('+', '/')
+                    typ.FullName.[typ.Namespace.Length + 1 .. ].Replace('+', '/')
                 else
                     typ.Name
             name.ToLowerInvariant()
