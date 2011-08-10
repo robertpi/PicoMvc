@@ -310,7 +310,9 @@ module ControllerMapper =
                     logger.Error(ex, "Error handling module %s request for %s, error was") context.Request.Verb path
                     reraise()
             match res with
-            | NewProperties props -> props @ acc
+            | NewProperties props -> 
+                // TODO, should we update props as we go?
+                props @ acc
 
         let props = routingTables.Modules |> Seq.fold execModule []
 
