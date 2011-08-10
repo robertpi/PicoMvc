@@ -37,6 +37,9 @@ type File =
       FileName: string
       InputStream: Stream }
 
+type ModuleResult =
+    | NewProperties of List<string*obj>
+
 type ControllerResult =
     | Result of obj
     | ResultAndValidationMessages of obj * Map<string,string>
@@ -112,13 +115,16 @@ type PicoResponse(rawStream: Stream,
     member x.WriteCookie cookie = writeCookie cookie
     member x.Redirect url = redirect url
 
-type PicoContext(request: PicoRequest, response: PicoResponse, mapPath: string -> string) =
+type PicoContext(request: PicoRequest, response: PicoResponse, properties: Map<string,obj>, mapPath: string -> string) =
+    let mutable properties = properties
+    member internal x.UpdateProperties props = properties <- props
     member x.Request = request
     member x.Response = response
+    member x.Properties = properties
     member x.MapPath path = mapPath path
 
 
-type RoutingTable private (staticHandlersMap: Map<string * string, (string*Type)[] * (obj[] -> obj)>, dynamicHandlers) =
+type RoutingTable private (staticHandlersMap: Map<string * string, (string*Type)[] * (obj[] -> obj)>, dynamicHandlers, modules: list<(string*Type)[] * (obj[] -> obj)>) =
     static let httpVerbs = [ "get"; "put"; "post"; "delete"; ]
     static let logger = LogManager.getLogger()
 
@@ -128,12 +134,14 @@ type RoutingTable private (staticHandlersMap: Map<string * string, (string*Type)
             let invokeMethod = 
                 t.GetMethods()
                 |> Seq.filter (fun x -> x.Name = "Invoke")
+                // strange way to say invoke overload with most parameters
                 |> Seq.sortBy (fun x -> x.GetParameters().Length)
                 |> Seq.toList |> List.rev |> List.head
             let parameters = invokeMethod.GetParameters() |> Seq.map (fun x -> x.Name, x.ParameterType) |> Seq.toArray
             let invoke = fun parameters -> invokeMethod.Invoke(func, parameters)
             parameters, invoke
         else failwith "not a function"
+    member x.Modules = modules
 
     member x.GetHandlerFunction (request: PicoRequest) =
         let key = request.Verb.ToLowerInvariant(), request.UrlPart
@@ -207,7 +215,8 @@ type RoutingTable private (staticHandlersMap: Map<string * string, (string*Type)
 
         let dynamicHandlers = dynamicHandlerModules |> Seq.map getDynamicHandler |> Seq.toList
 
-        new RoutingTable(handlersMap, dynamicHandlers)
+        // TODO should we provide an attribute to allow us to declare a module?
+        new RoutingTable(handlersMap, dynamicHandlers, [])
 
     static member LoadFromCurrentAssemblies() =
         let assems = AppDomain.CurrentDomain.GetAssemblies()
@@ -216,12 +225,17 @@ type RoutingTable private (staticHandlersMap: Map<string * string, (string*Type)
     member x.AddStaticHandler((verb, url), func) =
         let dynamicFunc = getDynamicFunction func
         let handlersMap' = staticHandlersMap.Add((verb, url), dynamicFunc)
-        new RoutingTable(handlersMap', dynamicHandlers)
+        new RoutingTable(handlersMap', dynamicHandlers, modules)
 
     member x.AddDynamicHandler(acceptFunc: PicoRequest -> bool, func) =
         let dynamicFunc = getDynamicFunction func
         let handlersMap' = (acceptFunc, dynamicFunc) :: dynamicHandlers
-        new RoutingTable(staticHandlersMap, handlersMap')
+        new RoutingTable(staticHandlersMap, handlersMap', modules)
+
+    member x.AddModule(func) =
+        let dynamicFunc = getDynamicFunction func
+        let modules' = dynamicFunc :: modules
+        new RoutingTable(staticHandlersMap, dynamicHandlers, modules')
      
 type ParameterAction =
     { CanTreatParameter: PicoContext -> string -> Type -> bool
@@ -232,8 +246,9 @@ type ResultAction =
       ResultAction: PicoContext -> RenderingData -> unit }
 
 type IOActions =
-    { TreatParameterAction: List<ParameterAction>
-      TreatResultAction: List<ResultAction> }
+    { TreatModuleParameterActions: List<ParameterAction>
+      TreatHandlerParameterActions: List<ParameterAction>
+      TreatResultActions: List<ResultAction> }
 
 module ParamaterActions =
     let defaultParameterAction  =
@@ -272,14 +287,37 @@ module ControllerMapper =
 
         logger.Info "Processing %s request for %s" context.Request.Verb path
 
-        let handler = routingTables.GetHandlerFunction context.Request
         let parameterOfType (name:string, t:Type) = 
             let res =
-                ioActions.TreatParameterAction 
+                ioActions.TreatModuleParameterActions 
                 |> List.tryFind (fun pa -> pa.CanTreatParameter context name t)
             match res with
             | Some pa -> pa.ParameterAction context name t
             | None -> null
+         
+
+        // do the modules
+        let execModule acc (parametersTypes, handler: obj[] -> obj) =
+            let parameters =
+                parametersTypes
+                |> Array.map parameterOfType
+            let res = 
+                try
+                    let res = handler(parameters) :?> ModuleResult
+                    logger.Info "Successfully handled %s request for %s" context.Request.Verb path
+                    res
+                with ex ->
+                    logger.Error(ex, "Error handling module %s request for %s, error was") context.Request.Verb path
+                    reraise()
+            match res with
+            | NewProperties props -> props @ acc
+
+        let props = routingTables.Modules |> Seq.fold execModule []
+
+        context.UpdateProperties (props |> Map.ofList)
+
+        // handle the main request
+        let handler = routingTables.GetHandlerFunction context.Request
 
         match handler with
         | Some (parametersTypes, handler) ->
@@ -294,12 +332,13 @@ module ControllerMapper =
                     let res = handler(parameters) :?> ControllerResult
                     logger.Info "Successfully handled %s request for %s" context.Request.Verb path
                     Res res
-                with ex -> 
+                with ex ->
+                    // TODO maybe better to rethrow the exception here can't decide 
                     logger.Error(ex, "Error handling %s request for %s, error was") context.Request.Verb path
                     Exc ex
             let treatResult obj =
                 let res =
-                    ioActions.TreatResultAction 
+                    ioActions.TreatResultActions 
                     |> List.tryFind (fun pa -> pa.CanTreatResult context obj)
                 match res with
                 | Some pa -> pa.ResultAction context obj

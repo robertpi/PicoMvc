@@ -76,7 +76,8 @@ module AspNet =
         httpContext.Response.ContentEncoding <- encoding
         // TODO hack, would be better to give developer the control of this
         httpContext.Response.ContentType <- sprintf "%s; charset=%s" httpContext.Response.ContentType encoding.WebName 
-        let context = new PicoContext(request, response, httpContext.Server.MapPath)
+        let context = new PicoContext(request, response, Map.empty, httpContext.Server.MapPath)
+
         ControllerMapper.handleRequest routingTables context actions
 
 
