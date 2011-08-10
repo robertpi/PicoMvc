@@ -287,9 +287,9 @@ module ControllerMapper =
 
         logger.Info "Processing %s request for %s" context.Request.Verb path
 
-        let parameterOfType (name:string, t:Type) = 
+        let parameterOfType  actions (name:string, t:Type) = 
             let res =
-                ioActions.TreatModuleParameterActions 
+                actions
                 |> List.tryFind (fun pa -> pa.CanTreatParameter context name t)
             match res with
             | Some pa -> pa.ParameterAction context name t
@@ -299,8 +299,8 @@ module ControllerMapper =
         // do the modules
         let execModule acc (parametersTypes, handler: obj[] -> obj) =
             let parameters =
-                parametersTypes
-                |> Array.map parameterOfType
+                parametersTypes 
+                |> Array.map (parameterOfType ioActions.TreatModuleParameterActions)
             let res = 
                 try
                     let res = handler(parameters) :?> ModuleResult
@@ -324,8 +324,8 @@ module ControllerMapper =
         match handler with
         | Some (parametersTypes, handler) ->
             let parameters =
-                parametersTypes
-                |> Array.map parameterOfType
+                parametersTypes 
+                |> Array.map (parameterOfType ioActions.TreatHandlerParameterActions)
             let paramPair = Seq.zip parametersTypes parameters |> Seq.map(fun ((name,_), v) -> sprintf "%s: %A" name v)
             logger.Info "Parameters for %s request for %s: %s" context.Request.Verb path (String.Join(", ", paramPair))
 
